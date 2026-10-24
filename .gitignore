@@ -17,3 +17,8 @@ mobile_app/android/app/build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Build Artifacts
+release_apk/
+*.apk
+*.zip
