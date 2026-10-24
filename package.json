@@ -1,0 +1,9 @@
+{
+  "name": "barati-swimming-preview",
+  "version": "1.0.0",
+  "description": "سامانه مدیریت تردد NFC و حسابداری آکادمی شنای براتی",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

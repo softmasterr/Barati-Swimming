@@ -1,0 +1,19 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Android
+mobile_app/android/.gradle/
+mobile_app/android/local.properties
+mobile_app/android/app/build/
+
+# OS
+.DS_Store
+Thumbs.db

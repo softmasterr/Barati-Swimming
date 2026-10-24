@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>آکادمی شنای براتی | سامانه مدیریت تردد NFC و حسابداری</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0284c7">
+  <link rel="stylesheet" href="styles.css">
+  <!-- Google Fonts Vazirmatn for clean Persian typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header / Top Bar -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 12c1.5 2 3.5 2 5 0 1.5-2 3.5-2 5 0 1.5 2 3.5 2 5 0 1.5-2 3.5-2 5 0"></path>
+            <path d="M2 17c1.5 2 3.5 2 5 0 1.5-2 3.5-2 5 0 1.5 2 3.5 2 5 0 1.5-2 3.5-2 5 0"></path>
+            <circle cx="12" cy="7" r="3"></circle>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>آکادمی شنای براتی</h1>
+          <span class="badge-role">سامانه جامع سرمربی • تردد NFC و مالی</span>
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <!-- Live Connection Status -->
+        <div id="connectionStatusPill" class="live-status online" title="وضعیت ارتباط با سرور ابری">
+          <span id="statusDot" class="status-dot"></span>
+          <span id="statusLabel" class="status-label">سیستم آنلاین (همگام)</span>
+        </div>
+
+        <!-- Offline Queue Indicator Button -->
+        <button id="openSyncQueueBtn" class="btn-sync-queue" title="مشاهده صف عملیات آفلاین منتظر همگام‌سازی">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          <span>صف آفلاین:</span>
+          <strong id="queueCountBadge">۰</strong>
+        </button>
+
+        <!-- Test Network Toggle Button (Simulate Offline/Online) -->
+        <button id="networkToggleBtn" class="btn-network-toggle" title="تغییر آزمایشی وضعیت اینترنت برای بررسی کارکرد آفلاین">
+          <svg id="networkOnlineIcon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+          <svg id="networkOfflineIcon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path><path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+          <span id="networkToggleText">قطع اینترنت (تست آفلاین)</span>
+        </button>
+
+        <!-- Sound Toggle -->
+        <button id="soundToggleBtn" class="btn-icon" title="صداهای اسکنر فعال است" aria-label="تغییر وضعیت صدا">
+          <svg id="soundOnIcon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+          </svg>
+          <svg id="soundOffIcon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <line x1="23" y1="9" x2="17" y2="15"></line>
+            <line x1="17" y1="9" x2="23" y2="15"></line>
+          </svg>
+        </button>
+        <div class="user-chip">
+          <div class="user-avatar">س‌ب</div>
+          <div class="user-info">
+            <span class="user-name">استاد براتی</span>
+            <span class="user-sub">سرمربی و مدیر آکادمی</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Bar -->
+  <nav class="nav-tabs" aria-label="بخش‌های سامانه">
+    <div class="nav-container">
+      <button class="nav-tab active" data-tab="scanner">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path><path d="M4 4h16"></path></svg>
+        <span>گیت و اسکنر تردد NFC</span>
+      </button>
+      <button class="nav-tab" data-tab="athletes">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        <span>ورزشکاران و کارت‌ها</span>
+      </button>
+      <button class="nav-tab" data-tab="coaches">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>
+        <span>مربیان و تسویه‌حساب</span>
+      </button>
+      <button class="nav-tab" data-tab="accounting">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+        <span>حسابداری و گردش مالی</span>
+      </button>
+      <button class="nav-tab" data-tab="sms">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        <span>گزارش پیامک‌ها (SMS)</span>
+        <span id="smsBadgeCount" class="counter-badge">۰</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Offline Status Alert Banner (Shown when disconnected) -->
+  <div id="offlineNoticeBanner" class="offline-notice-banner" style="display: none;">
+    <div class="offline-banner-content">
+      <span class="offline-badge-pill">⚠️ وضعیت آفلاین</span>
+      <span>ارتباط اینترنت قطع است. تمامی ترددها، مچ‌بندها و دریافت‌های مالی در <strong>حافظه محلی دستگاه</strong> ثبت شده و پس از وصل شدن اینترنت به طور خودکار همگام‌سازی خواهند شد.</span>
+    </div>
+    <div class="offline-banner-actions">
+      <button id="reconnectBannerBtn" class="btn-sm btn-secondary">تست اتصال مجدد</button>
+    </div>
+  </div>
+
+  <!-- Main Content Areas -->
+  <main class="main-container">
+
+    <!-- 1. SCANNER TAB -->
+    <section id="tab-scanner" class="tab-pane active">
+      <div class="scanner-grid">
+        
+        <!-- Left: Virtual Scanner & NFC Tap Zone -->
+        <div class="card scanner-box">
+          <div class="card-header">
+            <div>
+              <h2>اسکنر NFC ورودی استخر</h2>
+              <p class="text-muted">ورزشکار مچ‌بند یا کارت خود را نزدیک گوشی/سنسور می‌گیرد</p>
+            </div>
+            <span class="live-pill">آماده اسکن</span>
+          </div>
+
+          <div class="nfc-target-zone" id="nfcZone">
+            <div class="nfc-pulse-ring"></div>
+            <div class="nfc-icon-wrapper">
+              <svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
+                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
+                <line x1="2" y1="2" x2="22" y2="22"></line>
+              </svg>
+            </div>
+            <div class="nfc-instructions">
+              <strong>روی یکی از مچ‌بندهای تست زیر کلیک کنید</strong>
+              <span>یا شناسه UID کارت را وارد نمایید</span>
+            </div>
+          </div>
+
+          <!-- Quick Test Wristbands -->
+          <div class="quick-wristbands">
+            <span class="quick-title">مچ‌بندهای آماده جهت تست سناریوهای مختلف:</span>
+            <div class="wristbands-grid">
+              
+              <button class="wristband-btn band-green" data-uid="NFC-A101" title="ورود مجاز - تسویه کامل">
+                <span class="band-tag">مجاز عادی</span>
+                <strong>علی رضوانی</strong>
+                <small>UID: A101 • ۱۱ جلسه مانده</small>
+              </button>
+
+              <button class="wristband-btn band-yellow" data-uid="NFC-B202" title="ورود مجاز با هشدار بدهی">
+                <span class="band-tag">دارای بدهی</span>
+                <strong>مهدی کاظمی</strong>
+                <small>UID: B202 • ۴۵۰,۰۰۰ تومان بدهکار</small>
+              </button>
+
+              <button class="wristband-btn band-orange" data-uid="NFC-C303" title="ورود مجاز - جلسه آخر">
+                <span class="band-tag">جلسه آخر!</span>
+                <strong>سینا مرادی</strong>
+                <small>UID: C303 • ۱ جلسه باقیمانده</small>
+              </button>
+
+              <button class="wristband-btn band-red" data-uid="NFC-D404" title="غیرمجاز - جلسات پایان یافته">
+                <span class="band-tag">اتمام اعتبار</span>
+                <strong>پوریا عباسی</strong>
+                <small>UID: D404 • ۰ جلسه باقیمانده</small>
+              </button>
+
+              <button class="wristband-btn band-unknown" data-uid="NFC-UNKNOWN" title="کارت ناشناخته">
+                <span class="band-tag">کارت خام</span>
+                <strong>کارت ثبت نشده</strong>
+                <small>UID: E4:A2:39:10</small>
+              </button>
+
+            </div>
+          </div>
+
+          <!-- Manual UID / Barcode Input -->
+          <div class="manual-scan-bar">
+            <input type="text" id="manualUidInput" placeholder="ورود دستی UID کارت (مثال: NFC-A101)...">
+            <button id="manualScanBtn" class="btn-primary">اسکن کارت</button>
+            <button id="openManualEntryDialogBtn" class="btn-secondary">فراموشی کارت (جستجو نام)</button>
+          </div>
+        </div>
+
+        <!-- Right: Real-time Scan Result Panel & Live Feed -->
+        <div class="scanner-sidebar">
+          
+          <!-- Scan Result Card -->
+          <div class="card scan-result-card" id="scanResultCard">
+            <div class="result-placeholder" id="resultPlaceholder">
+              <div class="placeholder-icon">🪪</div>
+              <h3>منتظر اسکن کارت...</h3>
+              <p>با لمس هر کارت، اعتبارسنجی جلسات، بررسی بدهی مالی و ارسال پیامک خودکار انجام می‌شود.</p>
+            </div>
+
+            <div class="result-active-content" id="resultActiveContent" style="display:none;">
+              <div class="result-status-banner" id="resultBanner">
+                <div class="status-icon" id="resultStatusIcon">✅</div>
+                <div>
+                  <h3 id="resultStatusTitle">ورود تایید شد</h3>
+                  <p id="resultStatusSub">۱ جلسه کسر شد و تردد ثبت گردید</p>
+                </div>
+              </div>
+
+              <div class="athlete-scan-profile">
+                <div class="athlete-large-avatar" id="resultAvatar">ع‌ر</div>
+                <div class="profile-meta">
+                  <h4 id="resultName">علی رضوانی</h4>
+                  <span class="meta-tag" id="resultCoach">مربی: استاد سهرابی (اصلاح تکنیک)</span>
+                  <span class="meta-tag text-muted" id="resultPhone">۰۹۱۲۳۴۵۶۷۸۹</span>
+                </div>
+              </div>
+
+              <div class="scan-metrics-grid">
+                <div class="metric-pill">
+                  <span class="metric-lbl">مانده جلسات دوره</span>
+                  <strong class="metric-val text-primary" id="resultSessions">۱۰ جلسه</strong>
+                </div>
+                <div class="metric-pill">
+                  <span class="metric-lbl">وضعیت مالی</span>
+                  <strong class="metric-val" id="resultFinance">تسویه کامل (۰ تومان)</strong>
+                </div>
+                <div class="metric-pill">
+                  <span class="metric-lbl">ساعت ثبت تردد</span>
+                  <strong class="metric-val" id="resultTime">۱۸:۱۲</strong>
+                </div>
+                <div class="metric-pill">
+                  <span class="metric-lbl">اعتبار دوره تا</span>
+                  <strong class="metric-val" id="resultExpire">۱۴۰۵/۰۸/۳۰</strong>
+                </div>
+              </div>
+
+              <!-- SMS Notification Live Feed Alert -->
+              <div class="sms-sent-notice" id="resultSmsNotice">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"></path><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                <div class="sms-notice-text">
+                  <strong>پیامک خودکار ارسال شد:</strong>
+                  <span id="resultSmsText">«فرزند شما ساعت ۱۸:۱۲ وارد استخر شد. مانده جلسات: ۱۰»</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Recent Attendance Log -->
+          <div class="card recent-logs-card">
+            <div class="card-header-compact">
+              <h3>ترددهای امروز استخر</h3>
+              <span id="todayCountBadge" class="badge-count">۰ نفر</span>
+            </div>
+            <div class="recent-list" id="recentLogList">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 2. ATHLETES TAB -->
+    <section id="tab-athletes" class="tab-pane">
+      <div class="card">
+        <div class="table-header-bar">
+          <div>
+            <h2>لیست ورزشکاران آکادمی شنا</h2>
+            <p class="text-muted">مدیریت اعضا، کارت‌های NFC متصل، مانده جلسات و حسابداری فردی</p>
+          </div>
+          <div class="header-btns">
+            <button id="openNewAthleteDialogBtn" class="btn-primary">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>ثبت‌نام ورزشکار جدید</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="filters-bar">
+          <div class="search-input-wrapper">
+            <input type="text" id="athleteSearchInput" placeholder="جستجو بر اساس نام، تلفن یا UID کارت...">
+          </div>
+          <select id="athleteCoachFilter" class="filter-select">
+            <option value="all">همه مربیان</option>
+          </select>
+          <select id="athleteStatusFilter" class="filter-select">
+            <option value="all">همه وضعیت‌ها</option>
+            <option value="debt">دارای بدهی مالی</option>
+            <option value="active">دارای اعتبار جلسه</option>
+            <option value="expired">جلسات پایان یافته</option>
+          </select>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table" id="athletesTable">
+            <thead>
+              <tr>
+                <th>ورزشکار</th>
+                <th>مربی اختصاصی</th>
+                <th>پکیج / دوره</th>
+                <th>مانده جلسات</th>
+                <th>وضعیت حساب</th>
+                <th>کارت NFC</th>
+                <th>عملیات</th>
+              </tr>
+            </thead>
+            <tbody id="athletesTableBody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. COACHES TAB -->
+    <section id="tab-coaches" class="tab-pane">
+      <div class="card">
+        <div class="table-header-bar">
+          <div>
+            <h2>مدیریت مربیان و تسویه‌حساب کارکرد</h2>
+            <p class="text-muted">محاسبه درصدی، جلسه‌ای و حقوق ثابت مربیان به تفکیک حضور شاگردان</p>
+          </div>
+          <button id="openNewCoachDialogBtn" class="btn-primary">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>افزودن مربی جدید</span>
+          </button>
+        </div>
+
+        <div class="coaches-grid" id="coachesCardsContainer">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. ACCOUNTING TAB -->
+    <section id="tab-accounting" class="tab-pane">
+      
+      <!-- Top Financial KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card kpi-income">
+          <div class="kpi-icon">💰</div>
+          <div class="kpi-body">
+            <span class="kpi-title">کل درآمد شهریه‌ها</span>
+            <strong class="kpi-val" id="kpiTotalIncome">۳۸,۴۰۰,۰۰۰ تومان</strong>
+            <small class="kpi-sub">ثبت‌شده در این ماه</small>
+          </div>
+        </div>
+
+        <div class="kpi-card kpi-coaches">
+          <div class="kpi-icon">🏊</div>
+          <div class="kpi-body">
+            <span class="kpi-title">حق‌الزحمه مربیان</span>
+            <strong class="kpi-val text-warning" id="kpiCoachesPay">۱۴,۲۰۰,۰۰۰ تومان</strong>
+            <small class="kpi-sub">محاسبه بر اساس فرمول مربیان</small>
+          </div>
+        </div>
+
+        <div class="kpi-card kpi-expenses">
+          <div class="kpi-icon">🧾</div>
+          <div class="kpi-body">
+            <span class="kpi-title">هزینه‌های استخر و وسایل</span>
+            <strong class="kpi-val text-danger" id="kpiTotalExpenses">۸,۵۰۰,۰۰۰ تومان</strong>
+            <small class="kpi-sub">اجاره سانس و تجهیزات</small>
+          </div>
+        </div>
+
+        <div class="kpi-card kpi-profit">
+          <div class="kpi-icon">📈</div>
+          <div class="kpi-body">
+            <span class="kpi-title">سود خالص سرمربی</span>
+            <strong class="kpi-val text-success" id="kpiNetProfit">۱۵,۷۰۰,۰۰۰ تومان</strong>
+            <small class="kpi-sub">درآمد منهای مربیان و هزینه‌ها</small>
+          </div>
+        </div>
+
+        <div class="kpi-card kpi-debt">
+          <div class="kpi-icon">⏳</div>
+          <div class="kpi-body">
+            <span class="kpi-title">مطالبات وصول‌نشده (بدهی شاگردان)</span>
+            <strong class="kpi-val text-danger" id="kpiTotalDebts">۲,۴۵۰,۰۰۰ تومان</strong>
+            <small class="kpi-sub" id="kpiDebtorsCount">۳ ورزشکار بدهکار</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="accounting-sections-grid">
+        
+        <!-- Left: Transactions & Ledger -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>دفتر روزنامه و تراکنش‌ها</h2>
+              <p class="text-muted">دریافت شهریه‌ها، پرداخت دستمزد مربیان و مخارج استخر</p>
+            </div>
+            <div class="header-btns">
+              <button id="openNewPaymentDialogBtn" class="btn-success">
+                <span>+ ثبت دریافت شهریه</span>
+              </button>
+              <button id="openNewExpenseDialogBtn" class="btn-danger">
+                <span>- ثبت هزینه استخر</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>تاریخ</th>
+                  <th>نوع تراکنش</th>
+                  <th>شرح</th>
+                  <th>مبلغ (تومان)</th>
+                  <th>روش پرداخت</th>
+                  <th>ثبت‌کننده</th>
+                </tr>
+              </thead>
+              <tbody id="transactionsTableBody">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Right: Debtors List & Fast SMS Collection -->
+        <div class="card debtors-box">
+          <div class="card-header">
+            <div>
+              <h2>لیست بدهکاران فعال</h2>
+              <p class="text-muted">ورزشکاران دارای مانده بدهی شهریه</p>
+            </div>
+            <button id="sendBulkSmsReminderBtn" class="btn-secondary btn-sm">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              <span>ارسال پیامک یادآوری به همه</span>
+            </button>
+          </div>
+
+          <div class="debtors-list" id="debtorsListContainer">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- 5. SMS LOGS TAB -->
+    <section id="tab-sms" class="tab-pane">
+      <div class="card">
+        <div class="table-header-bar">
+          <div>
+            <h2>گزارش زنده وب‌سرویس پیامکی آکادمی (Kavenegar / FarazSMS)</h2>
+            <p class="text-muted">تمامی پیامک‌های اطلاع‌رسانی تردد، پایان جلسات و یادآوری بدهی</p>
+          </div>
+          <button id="clearSmsLogsBtn" class="btn-secondary">پاک‌سازی گزارش‌ها</button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>زمان ارسال</th>
+                <th>گیرنده</th>
+                <th>نوع رویداد</th>
+                <th>متن پیامک ارسالی</th>
+                <th>وضعیت سامانه مخابرات</th>
+              </tr>
+            </thead>
+            <tbody id="smsTableBody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MODAL DIALOGS ==================== -->
+
+  <!-- 1. Modal: Register New Athlete (Using modern closedby="any" and :user-valid/:user-invalid) -->
+  <dialog id="newAthleteDialog" closedby="any" aria-labelledby="newAthleteTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="newAthleteTitle">ثبت‌نام ورزشکار جدید در آکادمی شنا</h3>
+        <button type="button" class="btn-close" onclick="document.getElementById('newAthleteDialog').close()">✕</button>
+      </div>
+
+      <form id="newAthleteForm" class="modal-form">
+        <div class="form-row">
+          <div class="field">
+            <label for="athleteName">نام و نام خانوادگی ورزشکار *</label>
+            <input type="text" id="athleteName" required minlength="3" placeholder="مثال: آرین احمدی" autocomplete="name">
+            <span class="error-msg">لطفاً نام ورزشکار را به درستی وارد کنید.</span>
+          </div>
+
+          <div class="field">
+            <label for="athletePhone">شماره موبایل (جهت دریافت پیامک تردد) *</label>
+            <input type="tel" id="athletePhone" required pattern="^09[0-9]{9}$" placeholder="۰۹۱۲۳۴۵۶۷۸۹" autocomplete="tel">
+            <span class="error-msg">شماره موبایل باید ۱۱ رقم با فرمت ۰۹ باشد.</span>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label for="athleteCoachSelect">مربی اختصاصی *</label>
+            <select id="athleteCoachSelect" required>
+              <!-- Filled via JS -->
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="athletePackageSelect">دوره / پکیج آموزشی *</label>
+            <select id="athletePackageSelect" required>
+              <option value="12_basic" data-sessions="12" data-price="2800000">آموزش مقدماتی (۱۲ جلسه - ۲,۸۰۰,۰۰۰ تومان)</option>
+              <option value="12_advanced" data-sessions="12" data-price="3500000">آموزش پیشرفته (۱۲ جلسه - ۳,۵۰۰,۰۰۰ تومان)</option>
+              <option value="24_team" data-sessions="24" data-price="5800000">تیم مسابقات (۲۴ جلسه - ۵,۸۰۰,۰۰۰ تومان)</option>
+              <option value="8_technique" data-sessions="8" data-price="2200000">اصلاح تکنیک (۸ جلسه - ۲,۲۰۰,۰۰۰ تومان)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label for="athleteInitialPayment">مبلغ پرداختی نقدی / علی‌الحساب (تومان)</label>
+            <input type="number" id="athleteInitialPayment" min="0" step="100000" placeholder="مثلاً ۲,۰۰۰,۰۰۰ (باقیمانده بدهی ثبت می‌شود)">
+          </div>
+
+          <div class="field">
+            <label for="athleteNfcUid">شناسه مچ‌بند/کارت NFC (اختیاری)</label>
+            <div class="input-with-action">
+              <input type="text" id="athleteNfcUid" placeholder="مثال: NFC-E505">
+              <button type="button" id="generateRandomUidBtn" class="btn-sm btn-secondary">تولید خودکار</button>
+            </div>
+            <span class="hint">می‌توانید بعداً نیز کارت به ورزشکار تخصیص دهید.</span>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="document.getElementById('newAthleteDialog').close()">انصراف</button>
+          <button type="submit" class="btn-primary">ثبت‌نام و صدور اشتراک</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- 2. Modal: Manual Attendance (Card Forgotten) -->
+  <dialog id="manualEntryDialog" closedby="any" aria-labelledby="manualEntryTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="manualEntryTitle">ثبت دستی حضور (فراموشی مچ‌بند / کارت)</h3>
+        <button type="button" class="btn-close" onclick="document.getElementById('manualEntryDialog').close()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted">ورزشکار مورد نظر را جستجو کنید تا حضور او ثبت و یک جلسه کسر گردد:</p>
+        <input type="text" id="manualEntrySearch" placeholder="نام یا شماره موبایل را بنویسید..." class="full-input">
+        <div class="manual-athlete-results" id="manualAthleteResults">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- 3. Modal: Record Payment -->
+  <dialog id="newPaymentDialog" closedby="any" aria-labelledby="newPaymentTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="newPaymentTitle">ثبت دریافت شهریه / تسویه‌حساب بدهی</h3>
+        <button type="button" class="btn-close" onclick="document.getElementById('newPaymentDialog').close()">✕</button>
+      </div>
+      <form id="newPaymentForm" class="modal-form">
+        <div class="field">
+          <label for="paymentAthleteSelect">انتخاب ورزشکار *</label>
+          <select id="paymentAthleteSelect" required>
+            <!-- Filled via JS -->
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="paymentAmount">مبلغ دریافتی (تومان) *</label>
+            <input type="number" id="paymentAmount" required min="10000" step="50000" placeholder="مثلاً ۵۰۰,۰۰۰">
+            <span class="error-msg">لطفاً مبلغ معتبری وارد کنید.</span>
+          </div>
+          <div class="field">
+            <label for="paymentMethod">روش دریافت *</label>
+            <select id="paymentMethod" required>
+              <option value="کارتخوان پوز استخر">کارتخوان پوز استخر</option>
+              <option value="کارت‌به‌کارت">کارت‌به‌کارت</option>
+              <option value="وجه نقد به مربی">وجه نقد به مربی</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="paymentDescription">شماره پیگیری فیش یا توضیحات</label>
+          <input type="text" id="paymentDescription" placeholder="مثال: پیگیری ۹۸۲۳۷۱ بانک ملت">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="document.getElementById('newPaymentDialog').close()">انصراف</button>
+          <button type="submit" class="btn-success">ثبت دریافت و کسر از بدهی</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- 4. Modal: Record Pool Expense -->
+  <dialog id="newExpenseDialog" closedby="any" aria-labelledby="newExpenseTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="newExpenseTitle">ثبت هزینه استخر / تجهیزات</h3>
+        <button type="button" class="btn-close" onclick="document.getElementById('newExpenseDialog').close()">✕</button>
+      </div>
+      <form id="newExpenseForm" class="modal-form">
+        <div class="form-row">
+          <div class="field">
+            <label for="expenseCategory">دسته‌بندی هزینه *</label>
+            <select id="expenseCategory" required>
+              <option value="اجاره سانس استخر">اجاره سانس استخر</option>
+              <option value="خرید تجهیزات و وسایل شنا">خرید تجهیزات (تخته، فین، دوقلو، مچ‌بند NFC)</option>
+              <option value="حق شارژ و پذیرش مجموعه">حق شارژ و پذیرش مجموعه</option>
+              <option value="تبلیغات و پیامک">تبلیغات و شارژ پنل پیامک</option>
+              <option value="متفرقه">سایر هزینه‌های جاری</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="expenseAmount">مبلغ هزینه (تومان) *</label>
+            <input type="number" id="expenseAmount" required min="10000" step="50000" placeholder="مثلاً ۱,۵۰۰,۰۰۰">
+          </div>
+        </div>
+        <div class="field">
+          <label for="expenseTitle">شرح و فاکتور *</label>
+          <input type="text" id="expenseTitle" required placeholder="مثال: اجاره لاین ۴ و ۵ برای سانس فرد ساعت ۱۸">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="document.getElementById('newExpenseDialog').close()">انصراف</button>
+          <button type="submit" class="btn-danger">ثبت هزینه در دفتر مالی</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- 5. Modal: Assign / Change NFC Card -->
+  <dialog id="assignCardDialog" closedby="any" aria-labelledby="assignCardTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="assignCardTitle">تخصیص یا تعویض مچ‌بند NFC</h3>
+        <button type="button" class="btn-close" onclick="document.getElementById('assignCardDialog').close()">✕</button>
+      </div>
+      <form id="assignCardForm" class="modal-form">
+        <input type="hidden" id="assignAthleteId">
+        <p>در حال تنظیم مچ‌بند برای: <strong id="assignAthleteNameDisplay">-</strong></p>
+        <div class="field">
+          <label for="newCardUidInput">کد سخت‌افزاری UID مچ‌بند جدید *</label>
+          <div class="input-with-action">
+            <input type="text" id="newCardUidInput" required placeholder="مثال: NFC-98F1">
+            <button type="button" id="generateCardUidBtn" class="btn-secondary btn-sm">اسکن تستی</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="document.getElementById('assignCardDialog').close()">انصراف</button>
+          <button type="submit" class="btn-primary">ذخیره و پیوند مچ‌بند</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- 6. Modal: Coach Settlement (تسویه با مربی) -->
+  <dialog id="settleCoachDialog" closedby="any" aria-labelledby="settleCoachTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="settleCoachTitle">ثبت واریز دستمزد و تسویه‌حساب با مربی</h3>
+        <button type="button" class="btn-close" onclick="document.getElementById('settleCoachDialog').close()">✕</button>
+      </div>
+      <form id="settleCoachForm" class="modal-form">
+        <input type="hidden" id="settleCoachId">
+        <p>مربی: <strong id="settleCoachNameDisplay">-</strong></p>
+        <p>مانده بستانکاری مربی: <strong class="text-success" id="settleCoachPayableDisplay">- تومان</strong></p>
+        
+        <div class="field">
+          <label for="settleAmount">مبلغ واریز به حساب مربی (تومان) *</label>
+          <input type="number" id="settleAmount" required min="50000" step="100000">
+        </div>
+        <div class="field">
+          <label for="settleRef">شماره پیگیری انتقال ساتنا/پایا</label>
+          <input type="text" id="settleRef" placeholder="مثال: ارجاع پایا ۳۹۴۸۱">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="document.getElementById('settleCoachDialog').close()">انصراف</button>
+          <button type="submit" class="btn-primary">ثبت سند واریز دستمزد</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- 7. Modal: Offline Sync Queue (مدیریت صف آفلاین) -->
+  <dialog id="syncQueueDialog" closedby="any" aria-labelledby="syncQueueTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="syncQueueTitle">صف همگام‌سازی عملیات آفلاین استخر</h3>
+        <button type="button" class="btn-close" onclick="document.getElementById('syncQueueDialog').close()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted" style="margin-bottom:1rem;">
+          این عملیات در زمان قطع اینترنت در سیستم ثبت شده‌اند و در صف انتظار ارسال به سرور مرکزی قرار دارند:
+        </p>
+        
+        <div id="syncQueueItemsList" class="sync-queue-list">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <div class="sync-stats-box" id="syncStatsBox">
+          <div>وضعیت صف: <strong id="syncStatusSummary">۰ عملیات معلق</strong></div>
+          <small class="text-muted">در صورت وصل بودن اینترنت، همگام‌سازی به صورت خودکار در پس‌زمینه انجام می‌شود.</small>
+        </div>
+
+        <div class="modal-footer" style="margin-top:1.25rem;">
+          <button type="button" class="btn-secondary" onclick="document.getElementById('syncQueueDialog').close()">بستن</button>
+          <button type="button" id="forceSyncBtn" class="btn-primary">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            <span>ارسال و همگام‌سازی با سرور (Sync Now)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Scripts -->
+  <script src="app.js"></script>
+</body>
+</html>
