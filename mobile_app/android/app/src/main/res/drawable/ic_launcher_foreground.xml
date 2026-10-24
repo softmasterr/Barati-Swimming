@@ -1,0 +1,22 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Swimmer head -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,36a9,9 0 1,0 0.001,-0.001Z" />
+    <!-- Wave 1 -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:pathData="M24,56 C32,50 40,62 48,56 C56,50 64,62 72,56 C80,50 88,62 96,56" />
+    <!-- Wave 2 -->
+    <path
+        android:strokeColor="#7DD3FC"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M20,68 C28,62 36,74 44,68 C52,62 60,74 68,68 C76,62 84,74 92,68" />
+</vector>

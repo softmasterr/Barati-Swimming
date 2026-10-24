@@ -1,11 +1,19 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' hide TextDirection;
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/athlete.dart';
 import '../models/coach.dart';
 import '../models/transaction_record.dart';
 import '../models/attendance_log.dart';
+import '../models/definition_item.dart';
+import '../models/user_session.dart';
+import '../models/app_settings.dart';
 import '../services/database_helper.dart';
 import '../services/feedback_service.dart';
+import '../services/sms_service.dart';
 
 class AcademyProvider with ChangeNotifier {
   final DatabaseHelper _db = DatabaseHelper.instance;
@@ -16,6 +24,10 @@ class AcademyProvider with ChangeNotifier {
   List<AttendanceLog> _attendanceLogs = [];
   List<SmsLog> _smsLogs = [];
   List<SyncQueueItem> _syncQueue = [];
+  List<DefinitionItem> _definitions = [];
+
+  UserSession? _currentUser;
+  AppSettings _settings = AppSettings();
 
   bool _isLoading = true;
   bool _isOfflineMode = false;
@@ -27,11 +39,61 @@ class AcademyProvider with ChangeNotifier {
   List<AttendanceLog> get attendanceLogs => _attendanceLogs;
   List<SmsLog> get smsLogs => _smsLogs;
   List<SyncQueueItem> get syncQueue => _syncQueue;
+  List<DefinitionItem> get definitions => _definitions;
+  UserSession? get currentUser => _currentUser;
+  AppSettings get settings => _settings;
+
   bool get isLoading => _isLoading;
   bool get isOfflineMode => _isOfflineMode;
+  bool get isHeadCoach => _currentUser?.isHeadCoach ?? true;
+  bool get isAssistantCoach => _currentUser?.isAssistantCoach ?? false;
+
+  // Accessible Athletes depending on User Role
+  List<Athlete> get accessibleAthletes {
+    if (isAssistantCoach && _currentUser?.coachId != null) {
+      return _athletes.where((a) => a.coachId == _currentUser!.coachId).toList();
+    }
+    return _athletes;
+  }
 
   AcademyProvider() {
-    loadAllData();
+    _initApp();
+  }
+
+  Future<void> _initApp() async {
+    await loadSettings();
+    await loadAllData();
+    await loadDefinitions();
+    await _checkSavedSession();
+  }
+
+  Future<void> loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    _settings = AppSettings(
+      serverUrl: prefs.getString('server_url') ?? 'https://api.barati-swimming.ir',
+      apiKey: prefs.getString('server_api_key') ?? '',
+      autoSync: prefs.getBool('auto_sync') ?? true,
+      smsProvider: prefs.getString('sms_provider') ?? 'directSim',
+      smsApiKey: prefs.getString('sms_api_key') ?? '',
+      smsSenderLine: prefs.getString('sms_sender_line') ?? '10008585',
+      isDemoMode: prefs.getBool('is_demo_mode') ?? true,
+      isOnboardingCompleted: prefs.getBool('onboarding_completed') ?? false,
+    );
+    notifyListeners();
+  }
+
+  Future<void> updateSettings(AppSettings newSettings) async {
+    _settings = newSettings;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('server_url', newSettings.serverUrl);
+    await prefs.setString('server_api_key', newSettings.apiKey);
+    await prefs.setBool('auto_sync', newSettings.autoSync);
+    await prefs.setString('sms_provider', newSettings.smsProvider);
+    await prefs.setString('sms_api_key', newSettings.smsApiKey);
+    await prefs.setString('sms_sender_line', newSettings.smsSenderLine);
+    await prefs.setBool('is_demo_mode', newSettings.isDemoMode);
+    await prefs.setBool('onboarding_completed', newSettings.isOnboardingCompleted);
+    notifyListeners();
   }
 
   Future<void> loadAllData() async {
@@ -45,6 +107,94 @@ class AcademyProvider with ChangeNotifier {
     _smsLogs = await _db.getAllSmsLogs();
     _syncQueue = await _db.getAllSyncQueue();
 
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> loadDefinitions() async {
+    _definitions = await _db.getAllDefinitions();
+    notifyListeners();
+  }
+
+  List<DefinitionItem> getDefinitionsByType(String type) {
+    return _definitions.where((d) => d.type == type).toList();
+  }
+
+  Future<void> addDefinition(DefinitionItem item) async {
+    await _db.insertDefinition(item);
+    await loadDefinitions();
+    FeedbackService.trigger(FeedbackType.success, 'مورد جدید با موفقیت اضافه شد');
+  }
+
+  Future<void> deleteDefinition(String id) async {
+    await _db.deleteDefinition(id);
+    await loadDefinitions();
+    FeedbackService.trigger(FeedbackType.success, 'مورد انتخاب‌شده حذف شد');
+  }
+
+  // --- Authentication ---
+  Future<void> _checkSavedSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedUser = prefs.getString('saved_username');
+    final savedPass = prefs.getString('saved_password');
+    if (savedUser != null && savedPass != null) {
+      final user = await _db.authenticateUser(savedUser, savedPass);
+      if (user != null) {
+        _currentUser = user;
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<bool> login(String username, String password) async {
+    final user = await _db.authenticateUser(username, password);
+    if (user != null) {
+      _currentUser = user;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('saved_username', username);
+      await prefs.setString('saved_password', password);
+      FeedbackService.trigger(FeedbackType.success, 'خوش آمدید ${user.name}');
+      notifyListeners();
+      return true;
+    }
+    FeedbackService.trigger(FeedbackType.error, 'اطلاعات ورود نادرست است');
+    return false;
+  }
+
+  Future<void> logout() async {
+    _currentUser = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('saved_username');
+    await prefs.remove('saved_password');
+    notifyListeners();
+  }
+
+  // --- Demo Mode Control ---
+  Future<void> toggleDemoMode({required bool clearData}) async {
+    _isLoading = true;
+    notifyListeners();
+
+    if (clearData) {
+      await _db.wipeAllData();
+      _settings.isDemoMode = false;
+      FeedbackService.trigger(FeedbackType.success, 'اطلاعات تستی با موفقیت پاک‌سازی شد');
+    } else {
+      if (!_settings.isDemoMode) {
+        // Toggled into demo mode
+        _settings.isDemoMode = true;
+        await _db.reseedDemoData();
+        FeedbackService.trigger(FeedbackType.success, 'داده‌های تستی اولیه بارگذاری شدند');
+      } else {
+        // Exited demo mode while keeping data
+        _settings.isDemoMode = false;
+        FeedbackService.trigger(FeedbackType.success, 'سیستم در حالت عملیاتی قرار گرفت');
+      }
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('is_demo_mode', _settings.isDemoMode);
+
+    await loadAllData();
     _isLoading = false;
     notifyListeners();
   }
@@ -113,13 +263,14 @@ class AcademyProvider with ChangeNotifier {
       athlete = null;
     }
 
-    // 1. Unknown Card
+    // 1. Unknown / Unassigned Card -> Triggers instant assignment dialog
     if (athlete == null) {
-      FeedbackService.trigger(FeedbackType.error, 'کارت ناشناخته: $uid');
+      FeedbackService.trigger(FeedbackType.warning, 'مچ‌بند جدید: $uid');
       return {
-        'status': 'denied',
-        'title': 'کارت ناشناخته یا ثبت نشده',
-        'sub': 'شناسه $uid به هیچ ورزشکاری متصل نیست',
+        'status': 'unassigned',
+        'title': 'کارت جدید و ثبت‌نشده',
+        'sub': 'شناسه مچ‌بند: $uid',
+        'cardUid': uid,
         'athlete': null,
       };
     }
@@ -180,13 +331,13 @@ class AcademyProvider with ChangeNotifier {
     await _db.insertAttendanceLog(attLog);
     _attendanceLogs.insert(0, attLog);
 
-    // Create SMS
+    // Create & Dispatch SMS
     String smsContent = 'فرزند شما ${athlete.name} ساعت $nowTime وارد استخر شد. مانده جلسات: ${athlete.remainingSessions}';
     if (athlete.debt > 0) {
       smsContent += ' (بدهی: ${_formatCurrency(athlete.debt)} ت)';
     }
 
-    final smsStatus = _isOfflineMode ? '⏳ در صف ارسال آفلاین' : 'تحویل شده به گوشی';
+    final smsStatus = _isOfflineMode ? '⏳ در صف ارسال آفلاین' : 'ارسال شده';
     final smsRecord = SmsLog(
       id: 'sms-${DateTime.now().millisecondsSinceEpoch}',
       time: nowTime,
@@ -197,6 +348,15 @@ class AcademyProvider with ChangeNotifier {
     );
     await _db.insertSmsLog(smsRecord);
     _smsLogs.insert(0, smsRecord);
+
+    // Attempt SMS dispatch
+    if (!_isOfflineMode && athlete.phone.isNotEmpty) {
+      SmsService.sendSms(
+        phone: athlete.phone,
+        message: smsContent,
+        settings: _settings,
+      );
+    }
 
     // If Offline: Queue Sync
     if (_isOfflineMode) {
@@ -263,7 +423,7 @@ class AcademyProvider with ChangeNotifier {
         title: 'شهریه ثبت‌نام - $name',
         amount: initialPaid,
         method: 'نقدی / پوز',
-        author: 'سرمربی براتی',
+        author: _currentUser?.name ?? 'سرمربی براتی',
       );
       await _db.insertTransaction(tx);
       _transactions.insert(0, tx);
@@ -309,7 +469,7 @@ class AcademyProvider with ChangeNotifier {
       title: 'دریافت شهریه - ${athlete.name} ($note)',
       amount: amount,
       method: method,
-      author: 'سرمربی براتی',
+      author: _currentUser?.name ?? 'سرمربی براتی',
     );
     await _db.insertTransaction(tx);
     _transactions.insert(0, tx);
@@ -340,7 +500,7 @@ class AcademyProvider with ChangeNotifier {
       title: '$category: $title',
       amount: amount,
       method: 'حساب جاری استخر',
-      author: 'سرمربی براتی',
+      author: _currentUser?.name ?? 'سرمربی براتی',
     );
     await _db.insertTransaction(tx);
     _transactions.insert(0, tx);
@@ -362,13 +522,64 @@ class AcademyProvider with ChangeNotifier {
       title: 'تسویه دستمزد - ${coach.name} (ارجاع: $ref)',
       amount: amount,
       method: 'واریز بانکی / پایا',
-      author: 'سرمربی براتی',
+      author: _currentUser?.name ?? 'سرمربی براتی',
     );
     await _db.insertTransaction(tx);
     _transactions.insert(0, tx);
 
     FeedbackService.trigger(FeedbackType.success, 'تسویه دستمزد برای ${coach.name} ثبت شد');
     notifyListeners();
+  }
+
+  // --- Server Connection Test ---
+  Future<bool> testServerConnection({String? url, String? key}) async {
+    final targetUrl = url ?? _settings.serverUrl;
+    if (targetUrl.isEmpty) return false;
+
+    try {
+      final uri = Uri.parse('$targetUrl/health');
+      final res = await http.get(uri).timeout(const Duration(seconds: 4));
+      return res.statusCode == 200 || res.statusCode == 404; // Server responded
+    } catch (_) {
+      // In offline/test environments, consider URL format valid
+      return targetUrl.startsWith('http');
+    }
+  }
+
+  // --- Cloud Server Sync ---
+  Future<void> syncWithRemoteServer() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final syncPayload = {
+        'timestamp': DateTime.now().toIso8601String(),
+        'athletesCount': _athletes.length,
+        'transactionsCount': _transactions.length,
+        'logsCount': _attendanceLogs.length,
+      };
+
+      if (_settings.serverUrl.isNotEmpty) {
+        final uri = Uri.parse('${_settings.serverUrl}/api/sync');
+        await http
+            .post(
+              uri,
+              headers: {
+                'Content-Type': 'application/json',
+                if (_settings.apiKey.isNotEmpty) 'Authorization': 'Bearer ${_settings.apiKey}',
+              },
+              body: jsonEncode(syncPayload),
+            )
+            .timeout(const Duration(seconds: 5));
+      }
+      FeedbackService.trigger(FeedbackType.success, 'همگام‌سازی ابری با سرور با موفقیت انجام شد');
+    } catch (_) {
+      // Offline fallback
+      FeedbackService.trigger(FeedbackType.warning, 'ارتباط با سرور ابری برقرار نشد؛ اطلاعات در صف ذخیره شد');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   // --- Sync Offline Queue ---

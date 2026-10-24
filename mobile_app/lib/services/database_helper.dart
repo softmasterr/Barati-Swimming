@@ -4,6 +4,8 @@ import '../models/athlete.dart';
 import '../models/coach.dart';
 import '../models/transaction_record.dart';
 import '../models/attendance_log.dart';
+import '../models/definition_item.dart';
+import '../models/user_session.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -23,9 +25,17 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
+  }
+
+  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await _createSecondaryTables(db);
+      await _seedSecondaryData(db);
+    }
   }
 
   Future<void> _createDB(Database db, int version) async {
@@ -112,8 +122,34 @@ class DatabaseHelper {
       )
     ''');
 
-    // Seed Initial Mock Data
+    await _createSecondaryTables(db);
     await _seedDatabase(db);
+    await _seedSecondaryData(db);
+  }
+
+  Future<void> _createSecondaryTables(Database db) async {
+    // 7. Users Table (Authentication & Roles)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        username TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL,
+        role TEXT NOT NULL,
+        coachId TEXT
+      )
+    ''');
+
+    // 8. Definitions Table (Cost Centers, Goods, Packages)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS definitions (
+        id TEXT PRIMARY KEY,
+        type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        code TEXT NOT NULL,
+        description TEXT
+      )
+    ''');
   }
 
   Future<void> _seedDatabase(Database db) async {
@@ -262,6 +298,62 @@ class DatabaseHelper {
     });
   }
 
+  Future<void> _seedSecondaryData(Database db) async {
+    // Seed Users
+    await db.insert('users', {
+      'id': 'u1',
+      'name': 'استاد براتی (سرمربی)',
+      'username': 'admin',
+      'password': '123',
+      'role': 'headCoach',
+      'coachId': null,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+
+    await db.insert('users', {
+      'id': 'u2',
+      'name': 'مربی رضا کمالی',
+      'username': 'kamali',
+      'password': '123',
+      'role': 'assistantCoach',
+      'coachId': 'c2',
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+
+    // Seed Definitions: Cost Centers
+    final costCenters = [
+      {'id': 'cc1', 'title': 'اجاره سانس‌های استخر', 'code': 'CC-POOL'},
+      {'id': 'cc2', 'title': 'خرید و تجهیزات شنا', 'code': 'CC-GEAR'},
+      {'id': 'cc3', 'title': 'پذیرش و خدمات مجموعه', 'code': 'CC-REC'},
+      {'id': 'cc4', 'title': 'تبلیغات و پیامک', 'code': 'CC-SMS'},
+    ];
+    for (var c in costCenters) {
+      await db.insert('definitions', {
+        'id': c['id']!,
+        'type': 'cost_center',
+        'title': c['title']!,
+        'code': c['code']!,
+        'description': '',
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    }
+
+    // Seed Definitions: Goods / Equipment
+    final goods = [
+      {'id': 'g1', 'title': 'تخته شنای فومی', 'code': 'G-BOARD'},
+      {'id': 'g2', 'title': 'فین شنای قدرتی / غواصی', 'code': 'G-FIN'},
+      {'id': 'g3', 'title': 'دوقلوی شنا (Pull Buoy)', 'code': 'G-BUOY'},
+      {'id': 'g4', 'title': 'مچ‌بند ضدآب NFC سیلیکونی', 'code': 'G-NFC'},
+      {'id': 'g5', 'title': 'کفی شنا (Hand Paddle)', 'code': 'G-PAD'},
+    ];
+    for (var g in goods) {
+      await db.insert('definitions', {
+        'id': g['id']!,
+        'type': 'goods_item',
+        'title': g['title']!,
+        'code': g['code']!,
+        'description': '',
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    }
+  }
+
   // --- CRUD Operations ---
   Future<List<Athlete>> getAllAthletes() async {
     final db = await database;
@@ -337,5 +429,59 @@ class DatabaseHelper {
   Future<int> clearSyncQueue() async {
     final db = await database;
     return await db.delete('sync_queue');
+  }
+
+  // --- Definitions ---
+  Future<List<DefinitionItem>> getAllDefinitions() async {
+    final db = await database;
+    final res = await db.query('definitions', orderBy: 'title ASC');
+    return res.map((m) => DefinitionItem.fromMap(m)).toList();
+  }
+
+  Future<List<DefinitionItem>> getDefinitions(String type) async {
+    final db = await database;
+    final res = await db.query('definitions', where: 'type = ?', whereArgs: [type], orderBy: 'title ASC');
+    return res.map((m) => DefinitionItem.fromMap(m)).toList();
+  }
+
+  Future<int> insertDefinition(DefinitionItem item) async {
+    final db = await database;
+    return await db.insert('definitions', item.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<int> deleteDefinition(String id) async {
+    final db = await database;
+    return await db.delete('definitions', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // --- Users & Authentication ---
+  Future<UserSession?> authenticateUser(String username, String password) async {
+    final db = await database;
+    final res = await db.query(
+      'users',
+      where: 'username = ? AND password = ?',
+      whereArgs: [username.trim(), password.trim()],
+    );
+    if (res.isNotEmpty) {
+      return UserSession.fromMap(res.first);
+    }
+    return null;
+  }
+
+  // --- Reset for Demo Mode ---
+  Future<void> wipeAllData() async {
+    final db = await database;
+    await db.delete('athletes');
+    await db.delete('transactions');
+    await db.delete('attendance_logs');
+    await db.delete('sms_logs');
+    await db.delete('sync_queue');
+  }
+
+  Future<void> reseedDemoData() async {
+    final db = await database;
+    await wipeAllData();
+    await _seedDatabase(db);
+    await _seedSecondaryData(db);
   }
 }

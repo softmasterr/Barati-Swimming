@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/academy_provider.dart';
 import '../widgets/checkin_result_sheet.dart';
+import '../widgets/new_card_detected_dialog.dart';
 
 class ScannerScreen extends StatefulWidget {
   const ScannerScreen({super.key});
@@ -23,7 +24,11 @@ class _ScannerScreenState extends State<ScannerScreen> {
     final provider = context.read<AcademyProvider>();
     final result = await provider.processCardScan(uid);
     if (mounted) {
-      CheckinResultSheet.show(context, result);
+      if (result['status'] == 'unassigned') {
+        NewCardDetectedDialog.show(context, uid);
+      } else {
+        CheckinResultSheet.show(context, result);
+      }
     }
   }
 

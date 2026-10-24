@@ -3,12 +3,15 @@ import 'package:provider/provider.dart';
 import '../providers/academy_provider.dart';
 import '../services/nfc_service.dart';
 import '../widgets/checkin_result_sheet.dart';
+import '../widgets/new_card_detected_dialog.dart';
 import '../widgets/sync_queue_dialog.dart';
 import 'scanner_screen.dart';
 import 'athletes_screen.dart';
 import 'coaches_screen.dart';
 import 'accounting_screen.dart';
 import 'sms_screen.dart';
+import 'definitions_screen.dart';
+import 'settings_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -19,14 +22,6 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
-
-  final List<Widget> _screens = const [
-    ScannerScreen(),
-    AthletesScreen(),
-    CoachesScreen(),
-    AccountingScreen(),
-    SmsScreen(),
-  ];
 
   @override
   void initState() {
@@ -40,7 +35,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       final provider = context.read<AcademyProvider>();
       final result = await provider.processCardScan(uid);
       if (mounted) {
-        CheckinResultSheet.show(context, result);
+        if (result['status'] == 'unassigned') {
+          NewCardDetectedDialog.show(context, result['cardUid'] ?? uid);
+        } else {
+          CheckinResultSheet.show(context, result);
+        }
       }
     });
   }
@@ -56,6 +55,42 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final provider = context.watch<AcademyProvider>();
     final isOffline = provider.isOfflineMode;
     final queueCount = provider.syncQueue.length;
+    final isHeadCoach = provider.isHeadCoach;
+    final user = provider.currentUser;
+
+    // Define tabs dynamically based on user role
+    final List<Widget> screens = isHeadCoach
+        ? const [
+            ScannerScreen(),
+            AthletesScreen(),
+            CoachesScreen(),
+            AccountingScreen(),
+            SmsScreen(),
+          ]
+        : const [
+            ScannerScreen(),
+            AthletesScreen(),
+            SmsScreen(),
+          ];
+
+    final List<BottomNavigationBarItem> navItems = isHeadCoach
+        ? const [
+            BottomNavigationBarItem(icon: Icon(Icons.nfc_rounded), label: 'گیت تردد'),
+            BottomNavigationBarItem(icon: Icon(Icons.people_alt_rounded), label: 'ورزشکاران'),
+            BottomNavigationBarItem(icon: Icon(Icons.sports_rounded), label: 'مربیان'),
+            BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet_rounded), label: 'حسابداری'),
+            BottomNavigationBarItem(icon: Icon(Icons.sms_rounded), label: 'پیامک‌ها'),
+          ]
+        : const [
+            BottomNavigationBarItem(icon: Icon(Icons.nfc_rounded), label: 'گیت تردد'),
+            BottomNavigationBarItem(icon: Icon(Icons.people_alt_rounded), label: 'ورزشکاران من'),
+            BottomNavigationBarItem(icon: Icon(Icons.sms_rounded), label: 'پیامک‌ها'),
+          ];
+
+    // Safety index check if role switched
+    if (_currentIndex >= screens.length) {
+      _currentIndex = 0;
+    }
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -76,22 +111,70 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 child: const Icon(Icons.pool_rounded, color: Colors.white, size: 22),
               ),
               const SizedBox(width: 10),
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('آکادمی شنای براتی', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
-                  Text('سامانه تردد NFC و حسابداری', style: TextStyle(color: Color(0xFF7DD3FC), fontSize: 10)),
+                  Row(
+                    children: [
+                      const Text(
+                        'آکادمی شنای براتی',
+                        style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                      if (provider.settings.isDemoMode) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withOpacity(0.25),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.amber, width: 0.8),
+                          ),
+                          child: const Text('آزمایشی', style: TextStyle(color: Colors.amber, fontSize: 9, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ],
+                  ),
+                  Text(
+                    user != null ? '${user.displayName} (${user.roleLabel})' : 'سامانه هوشمند تردد و حسابداری',
+                    style: const TextStyle(color: Color(0xFF7DD3FC), fontSize: 10),
+                  ),
                 ],
               ),
             ],
           ),
           actions: [
+            // Definitions Button (Only visible to Head Coach)
+            if (isHeadCoach)
+              IconButton(
+                icon: const Icon(Icons.category_rounded, color: Color(0xFF7DD3FC), size: 21),
+                tooltip: 'تعاریف پایه',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const DefinitionsScreen()),
+                  );
+                },
+              ),
+
+            // Settings Button
+            IconButton(
+              icon: const Icon(Icons.settings_rounded, color: Colors.white, size: 21),
+              tooltip: 'تنظیمات سامانه',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              },
+            ),
+
             // Offline/Online Toggle Button
             ActionChip(
+              visualDensity: VisualDensity.compact,
               avatar: Icon(
                 isOffline ? Icons.wifi_off_rounded : Icons.wifi_rounded,
                 color: isOffline ? Colors.red : Colors.green,
-                size: 14,
+                size: 13,
               ),
               label: Text(
                 isOffline ? 'آفلاین' : 'آنلاین',
@@ -104,14 +187,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               backgroundColor: isOffline ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7),
               onPressed: () => provider.toggleOfflineMode(),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 4),
 
             // Sync Queue Badge Button
             Stack(
               alignment: Alignment.center,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.sync_rounded, color: Colors.white),
+                  icon: const Icon(Icons.sync_rounded, color: Colors.white, size: 22),
                   tooltip: 'صف آفلاین',
                   onPressed: () => SyncQueueDialog.show(context),
                 ),
@@ -140,7 +223,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         // Body
         body: IndexedStack(
           index: _currentIndex,
-          children: _screens,
+          children: screens,
         ),
 
         // Bottom Navigation Bar
@@ -153,28 +236,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           selectedFontSize: 12,
           unselectedFontSize: 11,
           selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.nfc_rounded),
-              label: 'گیت تردد',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.people_alt_rounded),
-              label: 'ورزشکاران',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.sports_rounded),
-              label: 'مربیان',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.account_balance_wallet_rounded),
-              label: 'حسابداری',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.sms_rounded),
-              label: 'پیامک‌ها',
-            ),
-          ],
+          items: navItems,
         ),
       ),
     );

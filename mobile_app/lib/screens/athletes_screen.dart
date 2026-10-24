@@ -264,7 +264,7 @@ class _AthletesScreenState extends State<AthletesScreen> {
     final coaches = provider.coaches;
     final currency = NumberFormat('#,###', 'fa');
 
-    final filtered = provider.athletes.where((a) {
+    final filtered = provider.accessibleAthletes.where((a) {
       final matchesSearch = _searchQuery.isEmpty ||
           a.name.contains(_searchQuery) ||
           a.phone.contains(_searchQuery) ||

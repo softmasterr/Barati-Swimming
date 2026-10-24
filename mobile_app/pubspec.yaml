@@ -18,9 +18,14 @@ dependencies:
   # Hardware NFC Reading & Writing
   nfc_manager: ^3.3.0
 
-  # Offline Local Database
+  # Offline Local Database & Storage
   sqflite: ^2.3.3+1
   path: ^1.9.0
+  shared_preferences: ^2.2.3
+
+  # Networking & SMS Gateways
+  http: ^1.2.2
+  url_launcher: ^6.3.0
 
   # Haptic & Feedback
   fluttertoast: ^8.2.4
