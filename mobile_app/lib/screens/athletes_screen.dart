@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import 'package:provider/provider.dart';
 import '../providers/academy_provider.dart';
 import '../models/athlete.dart';
+import '../models/coach.dart';
 
 class AthletesScreen extends StatefulWidget {
   const AthletesScreen({super.key});
