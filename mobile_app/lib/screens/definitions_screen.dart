@@ -200,9 +200,9 @@ class _DefinitionsScreenState extends State<DefinitionsScreen> with SingleTicker
                     'شناسه: ${item.code}',
                     style: TextStyle(color: Colors.grey[700], fontSize: 11, fontWeight: FontWeight.w600),
                   ),
-                if (item.description.isNotEmpty)
+                if (item.description != null && item.description!.isNotEmpty)
                   Text(
-                    item.description,
+                    item.description!,
                     style: TextStyle(color: Colors.grey[600], fontSize: 11),
                   ),
               ],

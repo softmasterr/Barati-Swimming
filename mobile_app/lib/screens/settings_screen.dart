@@ -534,7 +534,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: const Text('راهنمای کار با برنامه (آموزش اولیه)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
               subtitle: const Text('مشاهده مجدد اسلایدهای معرفی امکانات سامانه', style: TextStyle(fontSize: 11)),
               trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
-              onPressed: () {
+              onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const OnboardingScreen(isRevisit: true)),
