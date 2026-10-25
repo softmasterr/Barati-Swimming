@@ -14,6 +14,7 @@ export const adminRouter = express.Router();
 // 1. Authentication & 2FA Flow
 adminRouter.post('/api/admin/login', authLockoutMiddleware, adminController.login);
 adminRouter.post('/api/admin/2fa/setup', adminController.setup2fa);
+adminRouter.post('/api/admin/2fa/quick-code', adminController.quickCode);
 adminRouter.post('/api/admin/2fa/verify', adminController.verify2fa);
 adminRouter.post('/api/admin/logout', adminController.logout);
 

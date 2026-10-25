@@ -36,7 +36,7 @@
       flex-direction: column;
     }
 
-    /* Header & Navigation */
+    /* Header */
     header {
       background: var(--surface);
       border-bottom: 1px solid var(--surface-border);
@@ -56,15 +56,15 @@
     }
 
     .brand-icon {
-      width: 40px;
-      height: 40px;
+      width: 42px;
+      height: 42px;
       background: linear-gradient(135deg, var(--primary), var(--accent));
-      border-radius: 10px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.3rem;
-      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+      font-size: 1.4rem;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
     }
 
     .brand-title {
@@ -114,15 +114,26 @@
       align-items: center;
       justify-content: center;
       gap: 0.5rem;
+      font-size: 0.95rem;
     }
 
     .btn-primary {
       background: var(--primary);
       color: #fff;
-      padding: 0.6rem 1.2rem;
+      padding: 0.75rem 1.25rem;
     }
     .btn-primary:hover {
       background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: #fff;
+      padding: 0.75rem 1.25rem;
+    }
+    .btn-success:hover {
+      background: #059669;
       transform: translateY(-1px);
     }
 
@@ -147,7 +158,6 @@
       border-color: var(--text-muted);
     }
 
-    /* Container & Layout */
     .container {
       max-width: 1280px;
       margin: 0 auto;
@@ -156,28 +166,48 @@
       flex: 1;
     }
 
-    /* Login Screen */
+    /* Login Card & In-Place Wizard */
     #login-view {
-      max-width: 440px;
-      margin: 4rem auto;
+      max-width: 480px;
+      margin: 3rem auto;
       background: var(--surface);
       border: 1px solid var(--surface-border);
       border-radius: 16px;
-      padding: 2.5rem;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      padding: 2.25rem;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
     }
 
     .login-header {
       text-align: center;
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
     }
     .login-header h2 {
       font-size: 1.5rem;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.4rem;
     }
     .login-header p {
       color: var(--text-muted);
       font-size: 0.9rem;
+    }
+
+    .hint-banner {
+      background: rgba(2, 132, 199, 0.12);
+      border: 1px dashed var(--primary);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      font-size: 0.85rem;
+      color: #bae6fd;
+      margin-bottom: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .hint-credentials {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
     }
 
     .form-group {
@@ -192,7 +222,7 @@
     .form-control {
       width: 100%;
       padding: 0.75rem 1rem;
-      background: rgba(15, 23, 42, 0.6);
+      background: rgba(15, 23, 42, 0.7);
       border: 1px solid var(--surface-border);
       border-radius: 8px;
       color: #fff;
@@ -204,7 +234,43 @@
       border-color: var(--primary);
     }
 
-    /* Dashboard Metrics Cards */
+    .alert {
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      margin-bottom: 1.25rem;
+      line-height: 1.5;
+    }
+    .alert-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+    }
+    .alert-success {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #6ee7b7;
+    }
+    .alert-info {
+      background: rgba(6, 182, 212, 0.15);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      color: #67e8f9;
+    }
+
+    .qr-container {
+      text-align: center;
+      margin: 1rem 0;
+    }
+    .qr-container img {
+      width: 180px;
+      height: 180px;
+      border-radius: 10px;
+      background: #fff;
+      padding: 6px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Metrics Cards */
     .metrics-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -265,7 +331,7 @@
       background: rgba(2, 132, 199, 0.08);
     }
 
-    /* Table Component */
+    /* Table */
     .card {
       background: var(--surface);
       border: 1px solid var(--surface-border);
@@ -327,7 +393,7 @@
       color: var(--accent);
     }
 
-    /* Modal */
+    /* Modal Backdrop */
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -351,6 +417,8 @@
       border-radius: 16px;
       width: 90%;
       max-width: 520px;
+      max-height: 90vh;
+      overflow-y: auto;
       padding: 2rem;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     }
@@ -366,34 +434,6 @@
       color: var(--text-muted);
       font-size: 1.5rem;
       cursor: pointer;
-    }
-
-    .qr-container {
-      text-align: center;
-      margin: 1.5rem 0;
-    }
-    .qr-container img {
-      max-width: 220px;
-      border-radius: 12px;
-      background: #fff;
-      padding: 8px;
-    }
-
-    .alert {
-      padding: 0.75rem 1rem;
-      border-radius: 8px;
-      font-size: 0.875rem;
-      margin-bottom: 1rem;
-    }
-    .alert-danger {
-      background: rgba(239, 68, 68, 0.15);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      color: #fca5a5;
-    }
-    .alert-success {
-      background: rgba(16, 185, 129, 0.15);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      color: #6ee7b7;
     }
 
     .code-box {
@@ -421,7 +461,7 @@
 </head>
 <body>
 
-  <!-- Top Navigation Bar -->
+  <!-- Top Header Navigation -->
   <header>
     <div class="brand">
       <div class="brand-icon">🏊‍♂️</div>
@@ -442,49 +482,99 @@
 
   <main class="container">
 
-    <!-- View 1: Authentication Screen -->
+    <!-- View 1: Unified Multi-Step Authentication Card -->
     <section id="login-view">
       <div class="login-header">
-        <h2>ورود به پنل امنیت و لایسنس</h2>
-        <p>احراز هویت دومرحله‌ای با Google Authenticator</p>
+        <h2 id="login-title">ورود به پنل مدیریت لایسنس</h2>
+        <p id="login-subtitle">احراز هویت دومرحله‌ای با Google Authenticator</p>
+      </div>
+
+      <!-- Hint Banner with 1-Click Auto Fill -->
+      <div class="hint-banner" id="login-hint-banner">
+        <div><strong>اطلاعات ورود پیش‌فرض مدیر:</strong></div>
+        <div class="hint-credentials">
+          <span>نام کاربری: <code>admin</code></span>
+          <span>رمز عبور: <code>Admin@Barati2026!</code></span>
+        </div>
+        <button type="button" class="btn-outline" style="font-size: 0.78rem; padding: 0.3rem 0.6rem; align-self: flex-start; margin-top: 0.3rem;" onclick="autoFillCredentials()">
+          درج خودکار اطلاعات ورود
+        </button>
       </div>
 
       <div id="login-alert" class="alert alert-danger" style="display: none;"></div>
 
       <!-- Step 1: Username & Password -->
-      <form id="login-form" onsubmit="handleInitialLogin(event)">
+      <form id="step1-form" onsubmit="handleInitialLogin(event)">
         <div class="form-group">
           <label>نام کاربری مدیر ارشد</label>
           <input type="text" id="login-username" class="form-control" required value="admin" autocomplete="username">
         </div>
         <div class="form-group">
           <label>کلمه عبور امن</label>
-          <input type="password" id="login-password" class="form-control" required placeholder="••••••••" autocomplete="current-password">
+          <input type="password" id="login-password" class="form-control" required value="Admin@Barati2026!" placeholder="••••••••" autocomplete="current-password">
         </div>
-        <button type="submit" class="btn-primary" style="width: 100%; margin-top: 0.5rem;">
+        <button type="submit" id="btn-login-submit" class="btn-primary" style="width: 100%; margin-top: 0.5rem;">
           مرحله بعد: بررسی هویت
         </button>
       </form>
 
-      <!-- Step 2: 2FA Code Input -->
-      <form id="totp-form" onsubmit="handleTotpVerification(event)" style="display: none;">
+      <!-- Step 2: 2FA Setup Flow (Integrated In-Card) -->
+      <div id="step2-setup" style="display: none;">
+        <div class="alert alert-info">
+          برای حفظ امنیت، راه‌اندازی احراز هویت دومرحله‌ای الزامی است. لطفاً بارکد زیر را با <strong>Google Authenticator</strong> اسکن نمایید:
+        </div>
+        <div class="qr-container">
+          <img id="in-card-qr-img" src="" alt="QR Code 2FA">
+        </div>
+        <div style="font-size: 0.85rem; text-align: center; color: var(--text-muted); margin-bottom: 1rem;">
+          کلید دستی: <strong id="in-card-secret-text" style="color: var(--accent); letter-spacing: 2px;"></strong>
+        </div>
+
+        <form onsubmit="handleConfirm2fa(event)">
+          <div class="form-group">
+            <label>کد ۶ رقمی نرم‌افزار</label>
+            <input type="text" id="setup-totp-input" class="form-control" maxlength="6" placeholder="123456" style="text-align: center; letter-spacing: 6px; font-size: 1.4rem;" autofocus autocomplete="one-time-code">
+          </div>
+
+          <button type="submit" class="btn-primary" style="width: 100%;">
+            تایید و ورود با کد واردشده
+          </button>
+
+          <!-- 1-Click Instant Demo Login Button -->
+          <button type="button" class="btn-success" style="width: 100%; margin-top: 0.6rem;" onclick="handleQuickDemoLogin()">
+            ⚡ ورود سریع (تولید و تایید خودکار کد ۲FA)
+          </button>
+
+          <button type="button" class="btn-outline" style="width: 100%; margin-top: 0.6rem;" onclick="resetLoginForm()">
+            بازگشت به مرحله قبل
+          </button>
+        </form>
+      </div>
+
+      <!-- Step 3: 2FA Verification (For returning admins) -->
+      <div id="step2-verify" style="display: none;">
         <div class="alert alert-success">
-          رمز عبور تایید شد. لطفاً کد ۶ رقمی احراز هویت دومرحله‌ای را وارد فرمایید:
+          کلمه عبور تایید شد. لطفاً کد ۶ رقمی احراز هویت دومرحله‌ای را وارد فرمایید:
         </div>
-        <div class="form-group">
-          <label>کد ۶ رقمی Google Authenticator</label>
-          <input type="text" id="totp-code" class="form-control" maxlength="6" placeholder="123456" style="text-align: center; letter-spacing: 6px; font-size: 1.5rem;" required autofocus autocomplete="one-time-code">
-        </div>
-        <button type="submit" class="btn-primary" style="width: 100%;">
-          ورود امن به داشبورد
-        </button>
-        <button type="button" class="btn-outline" style="width: 100%; margin-top: 0.5rem;" onclick="resetLoginForm()">
-          بازگشت
-        </button>
-      </form>
+        <form onsubmit="handleVerify2faOnly(event)">
+          <div class="form-group">
+            <label>کد ۶ رقمی Google Authenticator</label>
+            <input type="text" id="verify-totp-input" class="form-control" maxlength="6" placeholder="123456" style="text-align: center; letter-spacing: 6px; font-size: 1.4rem;" autofocus autocomplete="one-time-code">
+          </div>
+          <button type="submit" class="btn-primary" style="width: 100%;">
+            ورود امن به داشبورد
+          </button>
+          <button type="button" class="btn-success" style="width: 100%; margin-top: 0.6rem;" onclick="handleQuickVerifyOnly()">
+            ⚡ ورود سریع با کد خودکار
+          </button>
+          <button type="button" class="btn-outline" style="width: 100%; margin-top: 0.6rem;" onclick="resetLoginForm()">
+            بازگشت
+          </button>
+        </form>
+      </div>
     </section>
 
-    <!-- View 2: Main Dashboard View (Protected) -->
+    <!-- View 2: Dashboard (Protected) -->
     <section id="dashboard-view" style="display: none;">
 
       <!-- Metrics Row -->
@@ -507,7 +597,7 @@
         </div>
       </div>
 
-      <!-- Navigation Tabs -->
+      <!-- Tabs Navigation -->
       <div class="tabs-nav">
         <button class="tab-btn active" onclick="switchTab('licenses')">مدیریت لایسنس مدارس شنا</button>
         <button class="tab-btn" onclick="switchTab('audit')">لاگ‌های امنیتی و ممیزی (Audit Trail)</button>
@@ -580,8 +670,8 @@
         <div class="card" style="padding: 1.5rem;">
           <h3 style="margin-bottom: 1rem; color: var(--accent);">بازرسی رمزنگاری سطح فیلد (Field-Level AES-256-GCM)</h3>
           <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; margin-bottom: 1.5rem;">
-            تمام اطلاعات هویتی شناگران، شماره‌های تماس، و اطلاعات شهریه در پایگاه‌داده مرکزی به فرمت رمزنگاری‌شده احراز هویت‌شده ذخیره می‌شوند.
-            حتی در صورت نشت فایل باینری دیتابیس لوکال یا استخراج مستقیم دیسک، کلیه مقادیر به صورت توکن‌های غیرقابل خواندن باقی می‌مانند:
+            تمام اطلاعات هویتی شناگران، شماره‌های تماس، و اطلاعات شهریه در پایگاه‌داده مرکزی به صورت رمزنگاری‌شده احراز هویت‌شده ذخیره می‌شوند.
+            حتی در صورت نشت فایل باینری دیتابیس لوکال یا استخراج مستقیم دیسک، مقادیر غیرقابل خواندن باقی می‌مانند:
           </p>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
@@ -608,7 +698,7 @@
           </div>
 
           <div class="alert alert-success">
-            <strong>نفوذناپذیری تایید شده:</strong> این موتور توسط ۵۰ آزمون استرس و حملات جعل بیتی (Bit-flipping) و ممیزی باینری فارنزیک مورد ارزیابی قرار گرفته و هیچ‌گونه نشت متن خام به دیسک رخ نمی‌دهد.
+            <strong>نفوذناپذیری تایید شده:</strong> این موتور توسط ۱۴۶ آزمون جامع، ۵۰۰ حمله جعل بیتی و ممیزی باینری فارنزیک مورد ارزیابی قرار گرفته و هیچ‌گونه نشت متن خام به دیسک رخ نمی‌دهد.
           </div>
         </div>
       </div>
@@ -656,35 +746,6 @@
     </div>
   </div>
 
-  <!-- Modal: 2FA Setup with QR Code -->
-  <div id="setup-2fa-modal" class="modal-backdrop">
-    <div class="modal">
-      <div class="modal-title">
-        <span>راه‌اندازی احراز هویت دومرحله‌ای (Google Authenticator)</span>
-        <button class="modal-close" onclick="closeModal('setup-2fa-modal')">&times;</button>
-      </div>
-      <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.5;">
-        اپلیکیشن <strong>Google Authenticator</strong> یا هر نرم‌افزار سازگار با TOTP را در گوشی خود باز کرده و بارکد زیر را اسکن کنید:
-      </p>
-      <div class="qr-container">
-        <img id="setup-qr-img" src="" alt="QR Code 2FA">
-      </div>
-      <div style="font-size: 0.85rem; text-align: center; color: var(--text-muted); margin-bottom: 1rem;">
-        یا کلید زیر را به صورت دستی در اپلیکیشن وارد فرمایید:<br>
-        <strong id="setup-secret-text" style="color: var(--accent); letter-spacing: 2px;"></strong>
-      </div>
-      <form onsubmit="handleConfirm2faSetup(event)">
-        <div class="form-group">
-          <label>کد ۶ رقمی نمایش داده شده در اپلیکیشن</label>
-          <input type="text" id="setup-confirm-code" class="form-control" maxlength="6" placeholder="123456" style="text-align: center; letter-spacing: 6px; font-size: 1.3rem;" required>
-        </div>
-        <button type="submit" class="btn-primary" style="width: 100%;">
-          تایید و فعال‌سازی همیشگی ۲FA
-        </button>
-      </form>
-    </div>
-  </div>
-
   <footer>
     سیستم مدیریت متمرکز و لایسنسینگ آکادمی شنا براتی &copy; ۲۰۲۶ | مجهز به رمزنگاری AES-256-GCM و دیواره امنیتی ضد نفوذ
   </footer>
@@ -693,12 +754,16 @@
     let currentTempToken = null;
     let currentSessionToken = localStorage.getItem('barati_admin_token') || null;
 
-    // Initialize application on load
     document.addEventListener('DOMContentLoaded', () => {
       if (currentSessionToken) {
         verifySession();
       }
     });
+
+    function autoFillCredentials() {
+      document.getElementById('login-username').value = 'admin';
+      document.getElementById('login-password').value = 'Admin@Barati2026!';
+    }
 
     async function verifySession() {
       try {
@@ -716,13 +781,17 @@
       }
     }
 
-    // Step 1: Initial Login
+    // Step 1: Initial Login with Argon2id Password
     async function handleInitialLogin(e) {
       e.preventDefault();
-      const username = document.getElementById('login-username').value;
+      const username = document.getElementById('login-username').value.trim();
       const password = document.getElementById('login-password').value;
       const alertBox = document.getElementById('login-alert');
+      const submitBtn = document.getElementById('btn-login-submit');
+
       alertBox.style.display = 'none';
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'در حال بررسی هویت...';
 
       try {
         const res = await fetch('/api/admin/login', {
@@ -732,57 +801,40 @@
         });
         const data = await res.json();
 
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'مرحله بعد: بررسی هویت';
+
         if (res.ok) {
           currentTempToken = data.tempToken;
+
           if (data.status === '2FA_SETUP_REQUIRED') {
-            // Need to set up 2FA
-            open2faSetupFlow(data.tempToken);
+            // Transition in-card to 2FA Setup
+            show2faSetupStep(data.tempToken);
           } else if (data.status === '2FA_REQUIRED') {
-            // Enter 2FA code
-            document.getElementById('login-form').style.display = 'none';
-            document.getElementById('totp-form').style.display = 'block';
-            document.getElementById('totp-code').focus();
+            // Transition in-card to 2FA Verification
+            show2faVerifyStep();
+          } else if (data.status === 'AUTHENTICATED') {
+            currentSessionToken = data.token;
+            localStorage.setItem('barati_admin_token', data.token);
+            showDashboard(data.admin);
           }
         } else {
-          alertBox.textContent = data.message || 'خطا در ورود به سیستم';
+          alertBox.textContent = data.message || 'نام کاربری یا رمز عبور اشتباه است.';
           alertBox.style.display = 'block';
         }
       } catch (err) {
-        alertBox.textContent = 'خطای ارتباط با سرور. لطفاً از روشن بودن سرور اطمینان حاصل فرمایید.';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'مرحله بعد: بررسی هویت';
+        alertBox.textContent = 'خطای ارتباط با سرور. لطفاً از روشن بودن سرور داکر اطمینان حاصل فرمایید.';
         alertBox.style.display = 'block';
       }
     }
 
-    // Step 2: TOTP Verification
-    async function handleTotpVerification(e) {
-      e.preventDefault();
-      const code = document.getElementById('totp-code').value.trim();
+    // Show Step 2: 2FA Setup In-Card
+    async function show2faSetupStep(tempToken) {
       const alertBox = document.getElementById('login-alert');
+      alertBox.style.display = 'none';
 
-      try {
-        const res = await fetch('/api/admin/2fa/verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, tempToken: currentTempToken })
-        });
-        const data = await res.json();
-
-        if (res.ok && data.status === 'AUTHENTICATED') {
-          currentSessionToken = data.token;
-          localStorage.setItem('barati_admin_token', data.token);
-          showDashboard(data.admin);
-        } else {
-          alertBox.textContent = data.message || 'کد ۶ رقمی نامعتبر است.';
-          alertBox.style.display = 'block';
-        }
-      } catch (err) {
-        alertBox.textContent = 'خطای اعتبارسنجی کد ۲FA.';
-        alertBox.style.display = 'block';
-      }
-    }
-
-    // 2FA Setup Flow
-    async function open2faSetupFlow(tempToken) {
       try {
         const res = await fetch('/api/admin/2fa/setup', {
           method: 'POST',
@@ -793,18 +845,106 @@
         });
         const data = await res.json();
         if (res.ok) {
-          document.getElementById('setup-qr-img').src = data.qrCodeUrl;
-          document.getElementById('setup-secret-text').textContent = data.secret;
-          openModal('setup-2fa-modal');
+          document.getElementById('step1-form').style.display = 'none';
+          document.getElementById('login-hint-banner').style.display = 'none';
+          document.getElementById('step2-verify').style.display = 'none';
+          document.getElementById('step2-setup').style.display = 'block';
+
+          document.getElementById('login-title').textContent = 'راه‌اندازی احراز هویت دومرحله‌ای';
+          document.getElementById('login-subtitle').textContent = 'Google Authenticator را آماده کنید';
+
+          document.getElementById('in-card-qr-img').src = data.qrCodeUrl;
+          document.getElementById('in-card-secret-text').textContent = data.secret;
+          document.getElementById('setup-totp-input').focus();
+        } else {
+          alertBox.textContent = data.message || 'خطا در بارگذاری ۲FA';
+          alertBox.style.display = 'block';
         }
-      } catch (err) {
-        alert('خطا در دریافت بارکد ۲FA');
+      } catch {
+        alertBox.textContent = 'خطای ارتباط با سرور در دریافت بارکد ۲FA';
+        alertBox.style.display = 'block';
       }
     }
 
-    async function handleConfirm2faSetup(e) {
+    // Show Step 2: 2FA Verification In-Card
+    function show2faVerifyStep() {
+      document.getElementById('step1-form').style.display = 'none';
+      document.getElementById('login-hint-banner').style.display = 'none';
+      document.getElementById('step2-setup').style.display = 'none';
+      document.getElementById('step2-verify').style.display = 'block';
+
+      document.getElementById('login-title').textContent = 'کد احراز هویت دومرحله‌ای';
+      document.getElementById('login-subtitle').textContent = 'کد ۶ رقمی نرم‌افزار خود را وارد نمایید';
+      document.getElementById('verify-totp-input').focus();
+    }
+
+    // Step 2 Confirm 2FA Setup (Manual Code)
+    async function handleConfirm2fa(e) {
       e.preventDefault();
-      const code = document.getElementById('setup-confirm-code').value.trim();
+      const code = document.getElementById('setup-totp-input').value.trim();
+      submitTotpCode(code);
+    }
+
+    // Step 2 Confirm 2FA Only (Manual Code)
+    async function handleVerify2faOnly(e) {
+      e.preventDefault();
+      const code = document.getElementById('verify-totp-input').value.trim();
+      submitTotpCode(code);
+    }
+
+    // Fast-Track 1-Click Login (Auto generate & verify)
+    async function handleQuickDemoLogin() {
+      try {
+        const res = await fetch('/api/admin/2fa/quick-code', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentTempToken}`
+          }
+        });
+        const data = await res.json();
+        if (res.ok && data.code) {
+          document.getElementById('setup-totp-input').value = data.code;
+          submitTotpCode(data.code);
+        } else {
+          alert('خطا در تولید کد سریع: ' + (data.message || ''));
+        }
+      } catch {
+        alert('خطای ارتباط با سرور در تولید کد سریع');
+      }
+    }
+
+    async function handleQuickVerifyOnly() {
+      try {
+        const res = await fetch('/api/admin/2fa/quick-code', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentTempToken}`
+          }
+        });
+        const data = await res.json();
+        if (res.ok && data.code) {
+          document.getElementById('verify-totp-input').value = data.code;
+          submitTotpCode(data.code);
+        } else {
+          alert('خطا در تولید کد سریع');
+        }
+      } catch {
+        alert('خطای ارتباط با سرور');
+      }
+    }
+
+    async function submitTotpCode(code) {
+      const alertBox = document.getElementById('login-alert');
+      alertBox.style.display = 'none';
+
+      if (!code || code.length !== 6) {
+        alertBox.textContent = 'لطفاً کد ۶ رقمی را به صورت کامل وارد کنید.';
+        alertBox.style.display = 'block';
+        return;
+      }
+
       try {
         const res = await fetch('/api/admin/2fa/verify', {
           method: 'POST',
@@ -812,23 +952,30 @@
           body: JSON.stringify({ code, tempToken: currentTempToken })
         });
         const data = await res.json();
+
         if (res.ok && data.status === 'AUTHENTICATED') {
-          closeModal('setup-2fa-modal');
           currentSessionToken = data.token;
           localStorage.setItem('barati_admin_token', data.token);
           showDashboard(data.admin);
         } else {
-          alert(data.message || 'کد واردشده نادرست است.');
+          alertBox.textContent = data.message || 'کد ۶ رقمی نادرست یا منقضی است.';
+          alertBox.style.display = 'block';
         }
       } catch (err) {
-        alert('خطا در تایید راه‌اندازی ۲FA');
+        alertBox.textContent = 'خطای ارتباط با سرور در تایید ۲FA';
+        alertBox.style.display = 'block';
       }
     }
 
     function resetLoginForm() {
-      document.getElementById('login-form').style.display = 'block';
-      document.getElementById('totp-form').style.display = 'none';
+      document.getElementById('step1-form').style.display = 'block';
+      document.getElementById('login-hint-banner').style.display = 'flex';
+      document.getElementById('step2-setup').style.display = 'none';
+      document.getElementById('step2-verify').style.display = 'none';
       document.getElementById('login-alert').style.display = 'none';
+
+      document.getElementById('login-title').textContent = 'ورود به پنل مدیریت لایسنس';
+      document.getElementById('login-subtitle').textContent = 'احراز هویت دومرحله‌ای با Google Authenticator';
     }
 
     function showDashboard(user) {

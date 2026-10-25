@@ -51,7 +51,7 @@ export function deriveKey(passphrase, salt = DEFAULT_SALT) {
     N: 16384, // CPU/memory cost
     r: 8,     // Block size
     p: 1,     // Parallelization
-    maxmem: 32 * 1024 * 1024 // 32 MiB max memory
+    maxmem: 128 * 1024 * 1024 // 128 MiB max memory
   });
 }
 
