@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  barati-cloud-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: barati-swimming-cloud:latest
+    container_name: barati_cloud_backend
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_PATH=/app/data/barati.db
+      - DATA_ENCRYPTION_KEY=${DATA_ENCRYPTION_KEY:-barati-swimming-prod-aes-secret-key-32bytes}
+      - DATA_ENCRYPTION_SALT=${DATA_ENCRYPTION_SALT:-barati-swimming-master-salt-2026}
+      - JWT_SECRET=${JWT_SECRET:-barati-jwt-super-secret-key-min-32-chars-long}
+      - ADMIN_INITIAL_PASSWORD=${ADMIN_INITIAL_PASSWORD:-Admin@Barati2026!}
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+    volumes:
+      # Persistent SQLite storage volume
+      - barati_data:/app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  barati_data:
+    driver: local

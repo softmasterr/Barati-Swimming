@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+data/*.db
+data/*.db-wal
+data/*.db-shm
+tests
+.git
+.github
+.gitignore
+.env
+.env.local
+Dockerfile*
+docker-compose*.yml
+test_tmp*

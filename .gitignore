@@ -1,6 +1,14 @@
-# Node
+# Node & Backend
 node_modules/
+backend_server/node_modules/
+backend_server/data/*.db
+backend_server/data/*.db-wal
+backend_server/data/*.db-shm
+backend_server/.env
 npm-debug.log*
+
+# Agents
+.agents/
 
 # Flutter / Dart
 .dart_tool/

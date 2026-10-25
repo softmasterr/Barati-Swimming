@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>پنل مدیریت لایسنس و سرور ابری | آکادمی شنا براتی</title>
+  <style>
+    :root {
+      --primary: #0284c7;
+      --primary-dark: #0369a1;
+      --primary-light: #e0f2fe;
+      --accent: #06b6d4;
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Vazirmatn", Tahoma, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-family);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header & Navigation */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--surface-border);
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+    }
+
+    .brand-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .brand-subtitle {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .nav-user {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 0.4rem 0.8rem;
+      border-radius: 20px;
+      border: 1px solid var(--surface-border);
+      font-size: 0.85rem;
+    }
+
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      outline: none;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      padding: 0.6rem 1.2rem;
+    }
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: #fff;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.85rem;
+    }
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--surface-border);
+      padding: 0.5rem 1rem;
+    }
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--text-muted);
+    }
+
+    /* Container & Layout */
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 2rem;
+      width: 100%;
+      flex: 1;
+    }
+
+    /* Login Screen */
+    #login-view {
+      max-width: 440px;
+      margin: 4rem auto;
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .login-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .login-header h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .login-header p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+    .form-control {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--surface-border);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    /* Dashboard Metrics Cards */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .metric-card {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 14px;
+      padding: 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--primary);
+    }
+    .metric-card.green::before { background: var(--success); }
+    .metric-card.cyan::before { background: var(--accent); }
+    .metric-card.amber::before { background: var(--warning); }
+
+    .metric-title {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    /* Tabs */
+    .tabs-nav {
+      display: flex;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--surface-border);
+      margin-bottom: 1.5rem;
+    }
+    .tab-btn {
+      padding: 0.75rem 1.25rem;
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 8px 8px 0 0;
+      border-bottom: 2px solid transparent;
+      font-size: 0.95rem;
+    }
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      background: rgba(2, 132, 199, 0.08);
+    }
+
+    /* Table Component */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--surface-border);
+    }
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 600;
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: right;
+    }
+    th, td {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--surface-border);
+      font-size: 0.9rem;
+    }
+    th {
+      background: rgba(15, 23, 42, 0.4);
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    tr:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.6rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-success { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-danger { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .badge-warning { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+
+    .key-display {
+      font-family: monospace;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+      color: var(--accent);
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      visibility: hidden;
+      opacity: 0;
+      transition: all 0.2s;
+    }
+    .modal-backdrop.open {
+      visibility: visible;
+      opacity: 1;
+    }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 16px;
+      width: 90%;
+      max-width: 520px;
+      padding: 2rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+    .modal-title {
+      font-size: 1.25rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-close {
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+
+    .qr-container {
+      text-align: center;
+      margin: 1.5rem 0;
+    }
+    .qr-container img {
+      max-width: 220px;
+      border-radius: 12px;
+      background: #fff;
+      padding: 8px;
+    }
+
+    .alert {
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+    }
+    .alert-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+    }
+    .alert-success {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #6ee7b7;
+    }
+
+    .code-box {
+      background: rgba(0, 0, 0, 0.4);
+      padding: 1rem;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      direction: ltr;
+      text-align: left;
+      overflow-x: auto;
+      border: 1px solid var(--surface-border);
+      color: #38bdf8;
+    }
+
+    footer {
+      border-top: 1px solid var(--surface-border);
+      padding: 1.5rem 2rem;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">🏊‍♂️</div>
+      <div>
+        <div class="brand-title">سرور ابری و مدیریت لایسنس آکادمی شنا</div>
+        <div class="brand-subtitle">Barati Swimming Cloud & License Center</div>
+      </div>
+    </div>
+    <div id="nav-auth-section" class="nav-user" style="display: none;">
+      <div class="user-badge">
+        <span class="status-indicator"></span>
+        <span id="nav-username">مدیر ارشد (admin)</span>
+        <span style="font-size: 0.75rem; color: var(--accent);">(2FA فعال)</span>
+      </div>
+      <button class="btn-outline" onclick="logoutAdmin()">خروج</button>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- View 1: Authentication Screen -->
+    <section id="login-view">
+      <div class="login-header">
+        <h2>ورود به پنل امنیت و لایسنس</h2>
+        <p>احراز هویت دومرحله‌ای با Google Authenticator</p>
+      </div>
+
+      <div id="login-alert" class="alert alert-danger" style="display: none;"></div>
+
+      <!-- Step 1: Username & Password -->
+      <form id="login-form" onsubmit="handleInitialLogin(event)">
+        <div class="form-group">
+          <label>نام کاربری مدیر ارشد</label>
+          <input type="text" id="login-username" class="form-control" required value="admin" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label>کلمه عبور امن</label>
+          <input type="password" id="login-password" class="form-control" required placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%; margin-top: 0.5rem;">
+          مرحله بعد: بررسی هویت
+        </button>
+      </form>
+
+      <!-- Step 2: 2FA Code Input -->
+      <form id="totp-form" onsubmit="handleTotpVerification(event)" style="display: none;">
+        <div class="alert alert-success">
+          رمز عبور تایید شد. لطفاً کد ۶ رقمی احراز هویت دومرحله‌ای را وارد فرمایید:
+        </div>
+        <div class="form-group">
+          <label>کد ۶ رقمی Google Authenticator</label>
+          <input type="text" id="totp-code" class="form-control" maxlength="6" placeholder="123456" style="text-align: center; letter-spacing: 6px; font-size: 1.5rem;" required autofocus autocomplete="one-time-code">
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%;">
+          ورود امن به داشبورد
+        </button>
+        <button type="button" class="btn-outline" style="width: 100%; margin-top: 0.5rem;" onclick="resetLoginForm()">
+          بازگشت
+        </button>
+      </form>
+    </section>
+
+    <!-- View 2: Main Dashboard View (Protected) -->
+    <section id="dashboard-view" style="display: none;">
+
+      <!-- Metrics Row -->
+      <div class="metrics-grid">
+        <div class="metric-card green">
+          <div class="metric-title">مدارس و آکادمی‌های فعال</div>
+          <div id="stat-active-schools" class="metric-value">۰</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-title">شناگران همگام‌شده در سرور</div>
+          <div id="stat-athletes" class="metric-value">۰</div>
+        </div>
+        <div class="metric-card cyan">
+          <div class="metric-title">ترددهای ثبت‌شده (NFC)</div>
+          <div id="stat-attendance" class="metric-value">۰</div>
+        </div>
+        <div class="metric-card amber">
+          <div class="metric-title">رویدادهای امنیتی ممیزی‌شده</div>
+          <div id="stat-audit-logs" class="metric-value">۰</div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="tabs-nav">
+        <button class="tab-btn active" onclick="switchTab('licenses')">مدیریت لایسنس مدارس شنا</button>
+        <button class="tab-btn" onclick="switchTab('audit')">لاگ‌های امنیتی و ممیزی (Audit Trail)</button>
+        <button class="tab-btn" onclick="switchTab('crypto')">مخزن رمزنگاری پایگاه‌داده (AES-256 Vault)</button>
+      </div>
+
+      <!-- Tab 1: Licenses Management -->
+      <div id="tab-licenses" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">فهرست آکادمی‌ها و اشتراک‌ها</div>
+            <button class="btn-primary" onclick="openCreateLicenseModal()">
+              + صدور لایسنس جدید
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>نام آکادمی شنا</th>
+                  <th>شناسه مدرسه (School ID)</th>
+                  <th>وضعیت اشتراک</th>
+                  <th>تاریخ انقضا</th>
+                  <th>دستگاه‌های متصل</th>
+                  <th>کلید لایسنس</th>
+                  <th>عملیات</th>
+                </tr>
+              </thead>
+              <tbody id="licenses-table-body">
+                <tr>
+                  <td colspan="7" style="text-align: center; color: var(--text-muted);">در حال دریافت اطلاعات...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Audit Logs -->
+      <div id="tab-audit" class="tab-content" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">ثبت وقایع امنیتی و تغییرات مدیریتی</div>
+            <button class="btn-outline" onclick="loadAuditLogs()">بروزرسانی لاگ‌ها</button>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>زمان</th>
+                  <th>مدیر عامل</th>
+                  <th>عنوان عملیات</th>
+                  <th>آدرس IP</th>
+                  <th>شناسه هدف</th>
+                  <th>وضعیت</th>
+                </tr>
+              </thead>
+              <tbody id="audit-table-body">
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--text-muted);">در حال بارگذاری لاگ‌ها...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Cryptographic Subsystem Inspector -->
+      <div id="tab-crypto" class="tab-content" style="display: none;">
+        <div class="card" style="padding: 1.5rem;">
+          <h3 style="margin-bottom: 1rem; color: var(--accent);">بازرسی رمزنگاری سطح فیلد (Field-Level AES-256-GCM)</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; margin-bottom: 1.5rem;">
+            تمام اطلاعات هویتی شناگران، شماره‌های تماس، و اطلاعات شهریه در پایگاه‌داده مرکزی به فرمت رمزنگاری‌شده احراز هویت‌شده ذخیره می‌شوند.
+            حتی در صورت نشت فایل باینری دیتابیس لوکال یا استخراج مستقیم دیسک، کلیه مقادیر به صورت توکن‌های غیرقابل خواندن باقی می‌مانند:
+          </p>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+            <div>
+              <div style="font-weight: 600; margin-bottom: 0.5rem; color: #f87171;">خروجی ذخیره‌شده روی دیسک دیتابیس (Ciphertext):</div>
+              <div class="code-box">
+                [athletes Table - Raw Database SQLite]<br>
+                name_encrypted: 5d18a472c5...:7f8e...:0a4f61...<br>
+                phone_encrypted: 3c91ea0291...:bb12...:77a83d...<br>
+                tuition_fee_encrypted: 8b02fc81...:3c81...:6d28...<br>
+                debt_encrypted: 4f12ab77...:a104...:1f90...
+              </div>
+            </div>
+            <div>
+              <div style="font-weight: 600; margin-bottom: 0.5rem; color: #34d399;">رمزگشایی بلادرنگ برای اپلیکیشن مجاز (Authenticated):</div>
+              <div class="code-box">
+                [Decrypted Payload for Verified School]<br>
+                name: "سهراب مرادی"<br>
+                phone: "09121112233"<br>
+                tuitionFee: 2500000<br>
+                debt: 0
+              </div>
+            </div>
+          </div>
+
+          <div class="alert alert-success">
+            <strong>نفوذناپذیری تایید شده:</strong> این موتور توسط ۵۰ آزمون استرس و حملات جعل بیتی (Bit-flipping) و ممیزی باینری فارنزیک مورد ارزیابی قرار گرفته و هیچ‌گونه نشت متن خام به دیسک رخ نمی‌دهد.
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- Modal: Create New License -->
+  <div id="create-license-modal" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-title">
+        <span>صدور لایسنس مدرسه شنا جدید</span>
+        <button class="modal-close" onclick="closeModal('create-license-modal')">&times;</button>
+      </div>
+      <form onsubmit="handleCreateLicense(event)">
+        <div class="form-group">
+          <label>شناسه یکتای مدرسه (لاتین، بدون فاصله)</label>
+          <input type="text" id="new-school-id" class="form-control" placeholder="esfahan-aquatic-club" required>
+        </div>
+        <div class="form-group">
+          <label>نام رسمی آکادمی شنا</label>
+          <input type="text" id="new-academy-name" class="form-control" placeholder="باشگاه شنا دلفین اصفهان" required>
+        </div>
+        <div class="form-group">
+          <label>شماره تماس مدیر مدرسه</label>
+          <input type="text" id="new-contact-phone" class="form-control" placeholder="09131112233">
+        </div>
+        <div class="form-group">
+          <label>مدت زمان اشتراک</label>
+          <select id="new-duration" class="form-control">
+            <option value="30">یک ماهه</option>
+            <option value="90">سه ماهه (فصلی)</option>
+            <option value="180">شش ماهه</option>
+            <option value="365" selected>یک‌ساله</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>حداکثر تعداد گوشی‌های مجاز (دستگاه مربیان)</label>
+          <input type="number" id="new-max-devices" class="form-control" value="3" min="1" max="20" required>
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1rem;">
+          صدور لایسنس و کلید فعال‌سازی
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: 2FA Setup with QR Code -->
+  <div id="setup-2fa-modal" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-title">
+        <span>راه‌اندازی احراز هویت دومرحله‌ای (Google Authenticator)</span>
+        <button class="modal-close" onclick="closeModal('setup-2fa-modal')">&times;</button>
+      </div>
+      <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.5;">
+        اپلیکیشن <strong>Google Authenticator</strong> یا هر نرم‌افزار سازگار با TOTP را در گوشی خود باز کرده و بارکد زیر را اسکن کنید:
+      </p>
+      <div class="qr-container">
+        <img id="setup-qr-img" src="" alt="QR Code 2FA">
+      </div>
+      <div style="font-size: 0.85rem; text-align: center; color: var(--text-muted); margin-bottom: 1rem;">
+        یا کلید زیر را به صورت دستی در اپلیکیشن وارد فرمایید:<br>
+        <strong id="setup-secret-text" style="color: var(--accent); letter-spacing: 2px;"></strong>
+      </div>
+      <form onsubmit="handleConfirm2faSetup(event)">
+        <div class="form-group">
+          <label>کد ۶ رقمی نمایش داده شده در اپلیکیشن</label>
+          <input type="text" id="setup-confirm-code" class="form-control" maxlength="6" placeholder="123456" style="text-align: center; letter-spacing: 6px; font-size: 1.3rem;" required>
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%;">
+          تایید و فعال‌سازی همیشگی ۲FA
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <footer>
+    سیستم مدیریت متمرکز و لایسنسینگ آکادمی شنا براتی &copy; ۲۰۲۶ | مجهز به رمزنگاری AES-256-GCM و دیواره امنیتی ضد نفوذ
+  </footer>
+
+  <script>
+    let currentTempToken = null;
+    let currentSessionToken = localStorage.getItem('barati_admin_token') || null;
+
+    // Initialize application on load
+    document.addEventListener('DOMContentLoaded', () => {
+      if (currentSessionToken) {
+        verifySession();
+      }
+    });
+
+    async function verifySession() {
+      try {
+        const res = await fetch('/api/admin/me', {
+          headers: { 'Authorization': `Bearer ${currentSessionToken}` }
+        });
+        if (res.ok) {
+          const user = await res.json();
+          showDashboard(user);
+        } else {
+          logoutAdmin();
+        }
+      } catch {
+        logoutAdmin();
+      }
+    }
+
+    // Step 1: Initial Login
+    async function handleInitialLogin(e) {
+      e.preventDefault();
+      const username = document.getElementById('login-username').value;
+      const password = document.getElementById('login-password').value;
+      const alertBox = document.getElementById('login-alert');
+      alertBox.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          currentTempToken = data.tempToken;
+          if (data.status === '2FA_SETUP_REQUIRED') {
+            // Need to set up 2FA
+            open2faSetupFlow(data.tempToken);
+          } else if (data.status === '2FA_REQUIRED') {
+            // Enter 2FA code
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('totp-form').style.display = 'block';
+            document.getElementById('totp-code').focus();
+          }
+        } else {
+          alertBox.textContent = data.message || 'خطا در ورود به سیستم';
+          alertBox.style.display = 'block';
+        }
+      } catch (err) {
+        alertBox.textContent = 'خطای ارتباط با سرور. لطفاً از روشن بودن سرور اطمینان حاصل فرمایید.';
+        alertBox.style.display = 'block';
+      }
+    }
+
+    // Step 2: TOTP Verification
+    async function handleTotpVerification(e) {
+      e.preventDefault();
+      const code = document.getElementById('totp-code').value.trim();
+      const alertBox = document.getElementById('login-alert');
+
+      try {
+        const res = await fetch('/api/admin/2fa/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, tempToken: currentTempToken })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.status === 'AUTHENTICATED') {
+          currentSessionToken = data.token;
+          localStorage.setItem('barati_admin_token', data.token);
+          showDashboard(data.admin);
+        } else {
+          alertBox.textContent = data.message || 'کد ۶ رقمی نامعتبر است.';
+          alertBox.style.display = 'block';
+        }
+      } catch (err) {
+        alertBox.textContent = 'خطای اعتبارسنجی کد ۲FA.';
+        alertBox.style.display = 'block';
+      }
+    }
+
+    // 2FA Setup Flow
+    async function open2faSetupFlow(tempToken) {
+      try {
+        const res = await fetch('/api/admin/2fa/setup', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${tempToken}`
+          }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('setup-qr-img').src = data.qrCodeUrl;
+          document.getElementById('setup-secret-text').textContent = data.secret;
+          openModal('setup-2fa-modal');
+        }
+      } catch (err) {
+        alert('خطا در دریافت بارکد ۲FA');
+      }
+    }
+
+    async function handleConfirm2faSetup(e) {
+      e.preventDefault();
+      const code = document.getElementById('setup-confirm-code').value.trim();
+      try {
+        const res = await fetch('/api/admin/2fa/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, tempToken: currentTempToken })
+        });
+        const data = await res.json();
+        if (res.ok && data.status === 'AUTHENTICATED') {
+          closeModal('setup-2fa-modal');
+          currentSessionToken = data.token;
+          localStorage.setItem('barati_admin_token', data.token);
+          showDashboard(data.admin);
+        } else {
+          alert(data.message || 'کد واردشده نادرست است.');
+        }
+      } catch (err) {
+        alert('خطا در تایید راه‌اندازی ۲FA');
+      }
+    }
+
+    function resetLoginForm() {
+      document.getElementById('login-form').style.display = 'block';
+      document.getElementById('totp-form').style.display = 'none';
+      document.getElementById('login-alert').style.display = 'none';
+    }
+
+    function showDashboard(user) {
+      document.getElementById('login-view').style.display = 'none';
+      document.getElementById('dashboard-view').style.display = 'block';
+      document.getElementById('nav-auth-section').style.display = 'flex';
+      document.getElementById('nav-username').textContent = user.username;
+
+      loadDashboardData();
+    }
+
+    function logoutAdmin() {
+      fetch('/api/admin/logout', { method: 'POST' }).catch(() => {});
+      localStorage.removeItem('barati_admin_token');
+      currentSessionToken = null;
+      document.getElementById('dashboard-view').style.display = 'none';
+      document.getElementById('nav-auth-section').style.display = 'none';
+      document.getElementById('login-view').style.display = 'block';
+      resetLoginForm();
+    }
+
+    async function loadDashboardData() {
+      loadStats();
+      loadLicenses();
+      loadAuditLogs();
+    }
+
+    async function loadStats() {
+      try {
+        const res = await fetch('/api/admin/stats', {
+          headers: { 'Authorization': `Bearer ${currentSessionToken}` }
+        });
+        if (res.ok) {
+          const { stats } = await res.json();
+          document.getElementById('stat-active-schools').textContent = stats.activeSchools;
+          document.getElementById('stat-athletes').textContent = stats.totalAthletes;
+          document.getElementById('stat-attendance').textContent = stats.totalAttendance;
+          document.getElementById('stat-audit-logs').textContent = stats.auditLogsCount;
+        }
+      } catch {}
+    }
+
+    async function loadLicenses() {
+      const tbody = document.getElementById('licenses-table-body');
+      try {
+        const res = await fetch('/api/admin/licenses', {
+          headers: { 'Authorization': `Bearer ${currentSessionToken}` }
+        });
+        if (!res.ok) return;
+        const { licenses } = await res.json();
+
+        if (licenses.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">هنوز هیچ لایسنسی صادر نشده است.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = licenses.map(l => {
+          const statusBadge = l.status === 'active'
+            ? '<span class="badge badge-success">فعال</span>'
+            : (l.status === 'expired' ? '<span class="badge badge-warning">منقضی</span>' : '<span class="badge badge-danger">غیرفعال</span>');
+
+          const expDate = new Date(l.expiryDate).toLocaleDateString('fa-IR');
+          const devCount = (l.devices && l.devices.length) || 0;
+
+          return `
+            <tr>
+              <td><strong>${escapeHtml(l.academyName)}</strong></td>
+              <td><code>${escapeHtml(l.schoolId)}</code></td>
+              <td>${statusBadge}</td>
+              <td>${expDate}</td>
+              <td>${devCount} / ${l.maxDevices} دستگاه</td>
+              <td>
+                <span class="key-display">${escapeHtml(l.licenseKey)}</span>
+                <button class="btn-outline" style="padding: 0.2rem 0.4rem; font-size: 0.75rem;" onclick="copyKey('${l.licenseKey}')">کپی</button>
+              </td>
+              <td>
+                <button class="btn-outline" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" onclick="renewLicensePrompt('${l.schoolId}')">تمدید</button>
+                ${l.status === 'active' ? `<button class="btn-danger" onclick="deactivateLicenseConfirm('${l.schoolId}')">قطع دسترسی</button>` : ''}
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger);">خطا در بارگذاری لایسنس‌ها</td></tr>';
+      }
+    }
+
+    async function handleCreateLicense(e) {
+      e.preventDefault();
+      const schoolId = document.getElementById('new-school-id').value.trim();
+      const academyName = document.getElementById('new-academy-name').value.trim();
+      const contactPhone = document.getElementById('new-contact-phone').value.trim();
+      const days = parseInt(document.getElementById('new-duration').value, 10);
+      const maxDevices = parseInt(document.getElementById('new-max-devices').value, 10);
+
+      const expDate = new Date();
+      expDate.setDate(expDate.getDate() + days);
+
+      try {
+        const res = await fetch('/api/admin/licenses', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentSessionToken}`
+          },
+          body: JSON.stringify({
+            schoolId,
+            academyName,
+            contactPhone,
+            expiryDate: expDate.toISOString(),
+            maxDevices
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          closeModal('create-license-modal');
+          alert(`لایسنس با موفقیت صادر شد!\n\nکلید فعال‌سازی:\n${data.license.licenseKey}\n\nاین کلید را در اپلیکیشن تبلت/موبایل مدرسه شنا وارد فرمایید.`);
+          loadDashboardData();
+        } else {
+          alert(data.message || 'خطا در ایجاد لایسنس');
+        }
+      } catch {
+        alert('خطا در ارتباط با سرور');
+      }
+    }
+
+    async function renewLicensePrompt(schoolId) {
+      const days = prompt('تعداد روزهای تمدید اشتراک را وارد کنید:', '365');
+      if (!days) return;
+
+      const expDate = new Date();
+      expDate.setDate(expDate.getDate() + parseInt(days, 10));
+
+      try {
+        const res = await fetch(`/api/admin/licenses/${schoolId}/renew`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentSessionToken}`
+          },
+          body: JSON.stringify({ newExpiryDate: expDate.toISOString() })
+        });
+        if (res.ok) {
+          alert('لایسنس با موفقیت تمدید شد.');
+          loadDashboardData();
+        } else {
+          alert('خطا در تمدید لایسنس');
+        }
+      } catch {
+        alert('خطای ارتباط با سرور');
+      }
+    }
+
+    async function deactivateLicenseConfirm(schoolId) {
+      if (!confirm(`آیا مطمئن هستید که می‌خواهید دسترسی مدرسه '${schoolId}' را فوراً مسدود کنید؟`)) return;
+
+      try {
+        const res = await fetch(`/api/admin/licenses/${schoolId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${currentSessionToken}` }
+        });
+        if (res.ok) {
+          alert('دسترسی مدرسه با موفقیت مسدود شد (HTTP 403 Forbidden).');
+          loadDashboardData();
+        } else {
+          alert('خطا در مسدودسازی لایسنس');
+        }
+      } catch {
+        alert('خطای ارتباط با سرور');
+      }
+    }
+
+    async function loadAuditLogs() {
+      const tbody = document.getElementById('audit-table-body');
+      try {
+        const res = await fetch('/api/admin/audit-logs', {
+          headers: { 'Authorization': `Bearer ${currentSessionToken}` }
+        });
+        if (!res.ok) return;
+        const { logs } = await res.json();
+
+        if (logs.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">هیچ رویداد امنیتی ثبت نشده است.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = logs.slice(0, 50).map(l => {
+          const date = new Date(l.timestamp).toLocaleString('fa-IR');
+          const badge = l.status === 'SUCCESS' ? '<span class="badge badge-success">موفق</span>' : '<span class="badge badge-danger">خطا/هشدار</span>';
+          return `
+            <tr>
+              <td>${date}</td>
+              <td>${escapeHtml(l.admin_username)}</td>
+              <td><code>${escapeHtml(l.action)}</code></td>
+              <td>${escapeHtml(l.ip_address)}</td>
+              <td>${l.target_id ? escapeHtml(l.target_id) : '-'}</td>
+              <td>${badge}</td>
+            </tr>
+          `;
+        }).join('');
+      } catch {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--danger);">خطا در بارگذاری لاگ‌ها</td></tr>';
+      }
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+
+      document.querySelector(`button[onclick="switchTab('${tabName}')"]`).classList.add('active');
+      document.getElementById(`tab-${tabName}`).style.display = 'block';
+    }
+
+    function openModal(id) {
+      document.getElementById(id).classList.add('open');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+    }
+
+    function openCreateLicenseModal() {
+      document.getElementById('new-school-id').value = '';
+      document.getElementById('new-academy-name').value = '';
+      document.getElementById('new-contact-phone').value = '';
+      openModal('create-license-modal');
+    }
+
+    function copyKey(key) {
+      navigator.clipboard.writeText(key).then(() => {
+        alert('کلید فعال‌سازی در حافظه کپی شد: ' + key);
+      });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>

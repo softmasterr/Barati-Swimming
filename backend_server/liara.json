@@ -1,0 +1,17 @@
+{
+  "platform": "node",
+  "app": "barati-swimming-cloud",
+  "port": 3000,
+  "node": {
+    "version": "22"
+  },
+  "disks": [
+    {
+      "name": "data",
+      "mountTo": "/app/data"
+    }
+  ],
+  "build": {
+    "location": "iran"
+  }
+}
