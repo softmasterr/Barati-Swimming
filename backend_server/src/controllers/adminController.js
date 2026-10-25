@@ -10,6 +10,8 @@ import qrcode from 'qrcode';
 import { config } from '../config/env.js';
 import { adminRepo } from '../db/repositories/adminRepo.js';
 import { licenseRepo } from '../db/repositories/licenseRepo.js';
+import { athleteRepo } from '../db/repositories/athleteRepo.js';
+import { attendanceRepo } from '../db/repositories/attendanceRepo.js';
 import { getClientIp } from '../middleware/rateLimiter.js';
 
 // Configure TOTP window (allow 1 step before/after for clock drift)
@@ -545,6 +547,34 @@ export class AdminController {
     const offset = parseInt(req.query.offset || '0', 10);
     const logs = adminRepo.getAuditLogs(limit, offset);
     return res.status(200).json({ status: 'success', logs });
+  };
+
+  /**
+   * List Synced Athletes across all schools (Admin view)
+   */
+  listAthletes = (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit || '200', 10), 500);
+      const offset = parseInt(req.query.offset || '0', 10);
+      const athletes = athleteRepo.findAll({ limit, offset });
+      return res.status(200).json({ status: 'success', athletes });
+    } catch (err) {
+      return res.status(500).json({ error: 'INTERNAL_ERROR', message: err.message });
+    }
+  };
+
+  /**
+   * List Gate Attendance Logs across all schools (Admin view)
+   */
+  listAttendance = (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit || '200', 10), 500);
+      const offset = parseInt(req.query.offset || '0', 10);
+      const logs = attendanceRepo.findAll({ limit, offset });
+      return res.status(200).json({ status: 'success', logs });
+    } catch (err) {
+      return res.status(500).json({ error: 'INTERNAL_ERROR', message: err.message });
+    }
   };
 }
 

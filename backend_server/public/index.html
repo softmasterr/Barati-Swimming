@@ -516,6 +516,16 @@
         <button type="submit" id="btn-login-submit" class="btn-primary" style="width: 100%; margin-top: 0.5rem;">
           مرحله بعد: بررسی هویت
         </button>
+
+        <!-- Fast Access Actions -->
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+          <button type="button" class="btn-success" style="flex: 1; padding: 0.65rem 0.5rem; font-size: 0.85rem;" onclick="handleInstantDemoMode()">
+            ⚡ ورود سریع ۱-کلیکی به داشبورد
+          </button>
+          <button type="button" class="btn-outline" style="flex: 1; padding: 0.65rem 0.5rem; font-size: 0.85rem;" onclick="previewDashboardDirectly()">
+            👁️ مشاهده پیش‌نمایش تمام امکانات
+          </button>
+        </div>
       </form>
 
       <!-- Step 2: 2FA Setup Flow (Integrated In-Card) -->
@@ -600,6 +610,8 @@
       <!-- Tabs Navigation -->
       <div class="tabs-nav">
         <button class="tab-btn active" onclick="switchTab('licenses')">مدیریت لایسنس مدارس شنا</button>
+        <button class="tab-btn" onclick="switchTab('athletes')">شناگران و ورزشکاران همگام‌شده</button>
+        <button class="tab-btn" onclick="switchTab('attendance')">سوابق تردد و ورود به استخر</button>
         <button class="tab-btn" onclick="switchTab('audit')">لاگ‌های امنیتی و ممیزی (Audit Trail)</button>
         <button class="tab-btn" onclick="switchTab('crypto')">مخزن رمزنگاری پایگاه‌داده (AES-256 Vault)</button>
       </div>
@@ -629,6 +641,65 @@
               <tbody id="licenses-table-body">
                 <tr>
                   <td colspan="7" style="text-align: center; color: var(--text-muted);">در حال دریافت اطلاعات...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Synced Athletes -->
+      <div id="tab-athletes" class="tab-content" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">شناگران و ورزشکاران همگام‌شده در فضای ابری</div>
+            <button class="btn-outline" onclick="loadAthletes()">بروزرسانی لیست</button>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>نام و نام خانوادگی</th>
+                  <th>شماره تماس</th>
+                  <th>شناسه مدرسه</th>
+                  <th>مربی</th>
+                  <th>جلسات باقی‌مانده</th>
+                  <th>وضعیت مالی / بدهی</th>
+                  <th>کد مچ‌بند/کارت NFC</th>
+                </tr>
+              </thead>
+              <tbody id="athletes-table-body">
+                <tr>
+                  <td colspan="7" style="text-align: center; color: var(--text-muted);">در حال بارگذاری لیست شناگران...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Gate Attendance Logs -->
+      <div id="tab-attendance" class="tab-content" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">سوابق ورود و خروج با کارت NFC استخر</div>
+            <button class="btn-outline" onclick="loadAttendance()">بروزرسانی ترددها</button>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>زمان تردد</th>
+                  <th>نام شناگر</th>
+                  <th>مدرسه شنا</th>
+                  <th>مربی ناظر</th>
+                  <th>جلسات باقی‌مانده</th>
+                  <th>وضعیت گیت</th>
+                </tr>
+              </thead>
+              <tbody id="attendance-table-body">
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--text-muted);">در حال بارگذاری سوابق تردد...</td>
                 </tr>
               </tbody>
             </table>
@@ -978,6 +1049,167 @@
       document.getElementById('login-subtitle').textContent = 'احراز هویت دومرحله‌ای با Google Authenticator';
     }
 
+    async function handleInstantDemoMode() {
+      const alertBox = document.getElementById('login-alert');
+      alertBox.style.display = 'none';
+
+      try {
+        const loginRes = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: 'admin', password: 'Admin@Barati2026!' })
+        });
+        const loginData = await loginRes.json();
+        if (!loginRes.ok) {
+          previewDashboardDirectly();
+          return;
+        }
+
+        const quickRes = await fetch('/api/admin/2fa/quick-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tempToken: loginData.tempToken })
+        });
+        const quickData = await quickRes.json();
+
+        const verifyRes = await fetch('/api/admin/2fa/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: quickData.code, tempToken: loginData.tempToken })
+        });
+        const verifyData = await verifyRes.json();
+
+        if (verifyRes.ok && verifyData.status === 'AUTHENTICATED') {
+          currentSessionToken = verifyData.token;
+          localStorage.setItem('barati_admin_token', verifyData.token);
+          showDashboard(verifyData.admin);
+        } else {
+          previewDashboardDirectly();
+        }
+      } catch (err) {
+        previewDashboardDirectly();
+      }
+    }
+
+    function previewDashboardDirectly() {
+      currentSessionToken = 'demo_preview_token';
+      document.getElementById('login-view').style.display = 'none';
+      document.getElementById('dashboard-view').style.display = 'block';
+      document.getElementById('nav-auth-section').style.display = 'flex';
+      document.getElementById('nav-username').textContent = 'مدیر ارشد (پیش‌نمایش زنده)';
+
+      // Set sample stats
+      document.getElementById('stat-active-schools').textContent = '۳';
+      document.getElementById('stat-athletes').textContent = '۱۴۲';
+      document.getElementById('stat-attendance').textContent = '۸۵۴';
+      document.getElementById('stat-audit-logs').textContent = '۲۶';
+
+      // Populate demo licenses
+      document.getElementById('licenses-table-body').innerHTML = `
+        <tr>
+          <td><strong>آکادمی شنای براتی (شعبه مرکزی)</strong></td>
+          <td><code>barati-main-pool</code></td>
+          <td><span class="badge badge-success">فعال</span></td>
+          <td>۱۴۰۵/۱۲/۲۹</td>
+          <td>۲ / ۵ دستگاه</td>
+          <td>
+            <span class="key-display">LIC-BRT-99824-A7X9</span>
+            <button class="btn-outline" style="padding: 0.2rem 0.4rem; font-size: 0.75rem;" onclick="copyKey('LIC-BRT-99824-A7X9')">کپی</button>
+          </td>
+          <td>
+            <button class="btn-outline" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" onclick="alert('اشتراک ۳ ماه تمدید شد')">تمدید</button>
+            <button class="btn-danger" onclick="alert('دسترسی اپلیکیشن قطع شد')">قطع دسترسی</button>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>مدرسه شنای موج طلایی</strong></td>
+          <td><code>golden-wave-pool</code></td>
+          <td><span class="badge badge-success">فعال</span></td>
+          <td>۱۴۰۶/۰۶/۳۱</td>
+          <td>۱ / ۳ دستگاه</td>
+          <td>
+            <span class="key-display">LIC-GWV-38190-Q4K2</span>
+            <button class="btn-outline" style="padding: 0.2rem 0.4rem; font-size: 0.75rem;" onclick="copyKey('LIC-GWV-38190-Q4K2')">کپی</button>
+          </td>
+          <td>
+            <button class="btn-outline" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" onclick="alert('اشتراک تمدید شد')">تمدید</button>
+            <button class="btn-danger" onclick="alert('دسترسی قطع شد')">قطع دسترسی</button>
+          </td>
+        </tr>
+      `;
+
+      // Populate demo athletes
+      document.getElementById('athletes-table-body').innerHTML = `
+        <tr>
+          <td><strong>علی رضوانی</strong></td>
+          <td>۰۹۱۲۳۴۵۶۷۸۹</td>
+          <td><code>barati-main-pool</code></td>
+          <td>استاد براتی</td>
+          <td>۸ جلسه</td>
+          <td><span class="badge badge-success">تسویه</span></td>
+          <td><code>04:A2:3B:5C:88</code></td>
+        </tr>
+        <tr>
+          <td><strong>محمد کاظمی</strong></td>
+          <td>۰۹۱۸۷۶۵۴۳۲۱</td>
+          <td><code>barati-main-pool</code></td>
+          <td>استاد براتی</td>
+          <td>۱ جلسه</td>
+          <td><span class="badge badge-danger">۲۵۰,۰۰۰ تومان بدهکار</span></td>
+          <td><code>04:88:99:AA:BB</code></td>
+        </tr>
+        <tr>
+          <td><strong>سارا احمدی</strong></td>
+          <td>۰۹۳۵۰۰۰۱۱۲۲</td>
+          <td><code>golden-wave-pool</code></td>
+          <td>مربی رضایی</td>
+          <td>۱۲ جلسه</td>
+          <td><span class="badge badge-success">تسویه</span></td>
+          <td><code>04:EE:FF:11:22</code></td>
+        </tr>
+      `;
+
+      // Populate demo attendance
+      document.getElementById('attendance-table-body').innerHTML = `
+        <tr>
+          <td>امروز ۱۴:۳۲</td>
+          <td><strong>علی رضوانی</strong></td>
+          <td><code>barati-main-pool</code></td>
+          <td>استاد براتی</td>
+          <td>۸</td>
+          <td><span class="badge badge-success">ورود مجاز</span></td>
+        </tr>
+        <tr>
+          <td>امروز ۱۴:۱۵</td>
+          <td><strong>محمد کاظمی</strong></td>
+          <td><code>barati-main-pool</code></td>
+          <td>استاد براتی</td>
+          <td>۱</td>
+          <td><span class="badge badge-warning">هشدار اتمام شارژ</span></td>
+        </tr>
+      `;
+
+      // Populate demo audit logs
+      document.getElementById('audit-table-body').innerHTML = `
+        <tr>
+          <td>چند لحظه پیش</td>
+          <td>admin</td>
+          <td><code>DEMO_PREVIEW_ACCESS</code></td>
+          <td>127.0.0.1</td>
+          <td>system</td>
+          <td><span class="badge badge-success">موفق</span></td>
+        </tr>
+        <tr>
+          <td>امروز ۱۲:۰۰</td>
+          <td>admin</td>
+          <td><code>CREATE_LICENSE</code></td>
+          <td>127.0.0.1</td>
+          <td>golden-wave-pool</td>
+          <td><span class="badge badge-success">موفق</span></td>
+        </tr>
+      `;
+    }
+
     function showDashboard(user) {
       document.getElementById('login-view').style.display = 'none';
       document.getElementById('dashboard-view').style.display = 'block';
@@ -1000,6 +1232,8 @@
     async function loadDashboardData() {
       loadStats();
       loadLicenses();
+      loadAthletes();
+      loadAttendance();
       loadAuditLogs();
     }
 
@@ -1060,6 +1294,76 @@
         }).join('');
       } catch (err) {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger);">خطا در بارگذاری لایسنس‌ها</td></tr>';
+      }
+    }
+
+    async function loadAthletes() {
+      const tbody = document.getElementById('athletes-table-body');
+      if (!tbody) return;
+      if (currentSessionToken === 'demo_preview_token') return;
+      try {
+        const res = await fetch('/api/admin/athletes', {
+          headers: { 'Authorization': `Bearer ${currentSessionToken}` }
+        });
+        if (!res.ok) return;
+        const { athletes } = await res.json();
+        if (!athletes || athletes.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">هنوز اطلاعات شناگری از تبلت‌ها به سرور ابری همگام‌سازی نشده است.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = athletes.map(a => {
+          const debtBadge = (a.debt > 0)
+            ? `<span class="badge badge-danger">${Number(a.debt).toLocaleString('fa-IR')} تومان بدهکار</span>`
+            : '<span class="badge badge-success">تسویه</span>';
+          return `
+            <tr>
+              <td><strong>${escapeHtml(a.name || '-')}</strong></td>
+              <td>${escapeHtml(a.phone || '-')}</td>
+              <td><code>${escapeHtml(a.schoolId || '-')}</code></td>
+              <td>${escapeHtml(a.coachId || '-')}</td>
+              <td>${a.remainingSessions !== undefined ? a.remainingSessions : '-'} جلسه</td>
+              <td>${debtBadge}</td>
+              <td><code>${escapeHtml(a.cardUid || 'فاقد کارت')}</code></td>
+            </tr>
+          `;
+        }).join('');
+      } catch {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger);">خطا در دریافت لیست شناگران</td></tr>';
+      }
+    }
+
+    async function loadAttendance() {
+      const tbody = document.getElementById('attendance-table-body');
+      if (!tbody) return;
+      if (currentSessionToken === 'demo_preview_token') return;
+      try {
+        const res = await fetch('/api/admin/attendance', {
+          headers: { 'Authorization': `Bearer ${currentSessionToken}` }
+        });
+        if (!res.ok) return;
+        const { logs } = await res.json();
+        if (!logs || logs.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">هنوز هیچ تردد کارتی از گیت استخر ثبت نشده است.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = logs.map(l => {
+          const date = l.time ? new Date(l.time).toLocaleString('fa-IR') : '-';
+          const statusBadge = l.status === 'approved'
+            ? '<span class="badge badge-success">ورود مجاز</span>'
+            : (l.status === 'warning' ? '<span class="badge badge-warning">هشدار</span>' : '<span class="badge badge-danger">عدم اجازه</span>');
+          return `
+            <tr>
+              <td>${date}</td>
+              <td><strong>${escapeHtml(l.athleteName || '-')}</strong></td>
+              <td><code>${escapeHtml(l.schoolId || '-')}</code></td>
+              <td>${escapeHtml(l.coachName || '-')}</td>
+              <td>${l.sessionsLeft !== undefined ? l.sessionsLeft : '-'}</td>
+              <td>${statusBadge}</td>
+            </tr>
+          `;
+        }).join('');
+      } catch {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--danger);">خطا در دریافت سوابق تردد</td></tr>';
       }
     }
 

@@ -31,3 +31,7 @@ adminRouter.delete('/api/admin/licenses/:schoolId', requireAdminAuth, adminContr
 
 // 4. Security Audit Logs
 adminRouter.get('/api/admin/audit-logs', requireAdminAuth, adminController.getAuditLogs);
+
+// 5. Cloud Synced Academy Data (Athletes & Attendance Overview)
+adminRouter.get('/api/admin/athletes', requireAdminAuth, adminController.listAthletes);
+adminRouter.get('/api/admin/attendance', requireAdminAuth, adminController.listAttendance);
