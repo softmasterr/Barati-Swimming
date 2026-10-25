@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/academy_provider.dart';
 import '../widgets/checkin_result_sheet.dart';
 import '../widgets/new_card_detected_dialog.dart';
+import '../widgets/duplicate_scan_dialog.dart';
 
 class ScannerScreen extends StatefulWidget {
   const ScannerScreen({super.key});
@@ -20,12 +21,20 @@ class _ScannerScreenState extends State<ScannerScreen> {
     super.dispose();
   }
 
-  void _triggerScan(String uid) async {
+  void _triggerScan(String uid, {bool bypassCooldown = false}) async {
     final provider = context.read<AcademyProvider>();
-    final result = await provider.processCardScan(uid);
+    final result = await provider.processCardScan(uid, bypassCooldown: bypassCooldown);
     if (mounted) {
       if (result['status'] == 'unassigned') {
         NewCardDetectedDialog.show(context, uid);
+      } else if (result['status'] == 'cooldown_warning') {
+        DuplicateScanDialog.show(
+          context,
+          athlete: result['athlete'],
+          minutesAgo: result['minutesAgo'],
+          lastTime: result['lastTime'],
+          onConfirm: () => _triggerScan(uid, bypassCooldown: true),
+        );
       } else {
         CheckinResultSheet.show(context, result);
       }

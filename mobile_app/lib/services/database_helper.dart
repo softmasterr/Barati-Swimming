@@ -25,7 +25,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -35,6 +35,13 @@ class DatabaseHelper {
     if (oldVersion < 2) {
       await _createSecondaryTables(db);
       await _seedSecondaryData(db);
+    }
+    if (oldVersion < 3) {
+      try {
+        await db.execute('ALTER TABLE definitions ADD COLUMN price INTEGER DEFAULT 0');
+        await db.execute('ALTER TABLE definitions ADD COLUMN sessions INTEGER DEFAULT 0');
+      } catch (_) {}
+      await _seedCoursePackages(db);
     }
   }
 
@@ -147,7 +154,9 @@ class DatabaseHelper {
         type TEXT NOT NULL,
         title TEXT NOT NULL,
         code TEXT NOT NULL,
-        description TEXT
+        description TEXT,
+        price INTEGER DEFAULT 0,
+        sessions INTEGER DEFAULT 0
       )
     ''');
   }
@@ -352,6 +361,27 @@ class DatabaseHelper {
         'description': '',
       }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
+
+    await _seedCoursePackages(db);
+  }
+
+  Future<void> _seedCoursePackages(Database db) async {
+    final courses = [
+      {'id': 'pkg1', 'title': 'آموزش مقدماتی (۱۲ جلسه)', 'code': 'PKG-BEG', 'sessions': 12, 'price': 2800000},
+      {'id': 'pkg2', 'title': 'آموزش پیشرفته (۱۲ جلسه)', 'code': 'PKG-ADV', 'sessions': 12, 'price': 3500000},
+      {'id': 'pkg3', 'title': 'تیم مسابقات (۲۴ جلسه)', 'code': 'PKG-PRO', 'sessions': 24, 'price': 5800000},
+    ];
+    for (var c in courses) {
+      await db.insert('definitions', {
+        'id': c['id'] as String,
+        'type': 'course_type',
+        'title': c['title'] as String,
+        'code': c['code'] as String,
+        'description': 'پکیج آموزشی استاندارد آکادمی',
+        'sessions': c['sessions'] as int,
+        'price': c['price'] as int,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    }
   }
 
   // --- CRUD Operations ---
@@ -447,6 +477,11 @@ class DatabaseHelper {
   Future<int> insertDefinition(DefinitionItem item) async {
     final db = await database;
     return await db.insert('definitions', item.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<int> updateDefinition(DefinitionItem item) async {
+    final db = await database;
+    return await db.update('definitions', item.toMap(), where: 'id = ?', whereArgs: [item.id]);
   }
 
   Future<int> deleteDefinition(String id) async {

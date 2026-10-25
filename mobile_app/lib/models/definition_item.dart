@@ -4,6 +4,8 @@ class DefinitionItem {
   final String title;
   final String code;
   final String? description;
+  final int? price;
+  final int? sessions;
 
   DefinitionItem({
     required this.id,
@@ -11,6 +13,8 @@ class DefinitionItem {
     required this.title,
     required this.code,
     this.description,
+    this.price,
+    this.sessions,
   });
 
   Map<String, dynamic> toMap() {
@@ -20,6 +24,8 @@ class DefinitionItem {
       'title': title,
       'code': code,
       'description': description ?? '',
+      'price': price ?? 0,
+      'sessions': sessions ?? 0,
     };
   }
 
@@ -30,6 +36,8 @@ class DefinitionItem {
       title: map['title'] ?? '',
       code: map['code'] ?? '',
       description: map['description'],
+      price: map['price'] != null ? (map['price'] as num).toInt() : null,
+      sessions: map['sessions'] != null ? (map['sessions'] as num).toInt() : null,
     );
   }
 }

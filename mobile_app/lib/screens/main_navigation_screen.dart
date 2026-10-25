@@ -4,6 +4,8 @@ import '../providers/academy_provider.dart';
 import '../services/nfc_service.dart';
 import '../widgets/checkin_result_sheet.dart';
 import '../widgets/new_card_detected_dialog.dart';
+import '../widgets/duplicate_scan_dialog.dart';
+import '../widgets/changelog_dialog.dart';
 import '../widgets/sync_queue_dialog.dart';
 import 'scanner_screen.dart';
 import 'athletes_screen.dart';
@@ -27,20 +29,41 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   void initState() {
     super.initState();
     _initGlobalNfcListener();
+
+    // Check version changelog on startup
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = context.read<AcademyProvider>();
+      if (provider.settings.lastSeenVersion != provider.settings.appVersion) {
+        ChangelogDialog.show(context, version: provider.settings.appVersion);
+        provider.markVersionSeen(provider.settings.appVersion);
+      }
+    });
+  }
+
+  void _triggerGlobalScan(String uid, {bool bypassCooldown = false}) async {
+    final provider = context.read<AcademyProvider>();
+    final result = await provider.processCardScan(uid, bypassCooldown: bypassCooldown);
+    if (mounted) {
+      if (result['status'] == 'unassigned') {
+        NewCardDetectedDialog.show(context, result['cardUid'] ?? uid);
+      } else if (result['status'] == 'cooldown_warning') {
+        DuplicateScanDialog.show(
+          context,
+          athlete: result['athlete'],
+          minutesAgo: result['minutesAgo'],
+          lastTime: result['lastTime'],
+          onConfirm: () => _triggerGlobalScan(uid, bypassCooldown: true),
+        );
+      } else {
+        CheckinResultSheet.show(context, result);
+      }
+    }
   }
 
   void _initGlobalNfcListener() {
     // Global Foreground NFC Dispatch: Listens for card taps across all screens!
     NfcService.instance.startListening((uid) async {
-      final provider = context.read<AcademyProvider>();
-      final result = await provider.processCardScan(uid);
-      if (mounted) {
-        if (result['status'] == 'unassigned') {
-          NewCardDetectedDialog.show(context, result['cardUid'] ?? uid);
-        } else {
-          CheckinResultSheet.show(context, result);
-        }
-      }
+      _triggerGlobalScan(uid);
     });
   }
 
@@ -116,9 +139,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 children: [
                   Row(
                     children: [
-                      const Text(
-                        'آکادمی شنای براتی',
-                        style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                      Text(
+                        provider.settings.academyName,
+                        style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
                       ),
                       if (provider.settings.isDemoMode) ...[
                         const SizedBox(width: 6),

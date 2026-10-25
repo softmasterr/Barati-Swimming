@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import 'package:provider/provider.dart';
 import '../providers/academy_provider.dart';
 import '../models/definition_item.dart';
@@ -25,21 +26,26 @@ class _DefinitionsScreenState extends State<DefinitionsScreen> with SingleTicker
     super.dispose();
   }
 
-  void _showAddDialog(String type) {
-    final titleCtrl = TextEditingController();
-    final codeCtrl = TextEditingController();
-    final descCtrl = TextEditingController();
+  void _showAddOrEditDialog({String? type, DefinitionItem? existingItem}) {
+    final isEditing = existingItem != null;
+    final itemType = isEditing ? existingItem.type : (type ?? 'cost_center');
+
+    final titleCtrl = TextEditingController(text: isEditing ? existingItem.title : '');
+    final codeCtrl = TextEditingController(text: isEditing ? existingItem.code : '');
+    final descCtrl = TextEditingController(text: isEditing ? (existingItem.description ?? '') : '');
+    final sessionsCtrl = TextEditingController(text: isEditing ? (existingItem.sessions?.toString() ?? '12') : '12');
+    final priceCtrl = TextEditingController(text: isEditing ? (existingItem.price?.toString() ?? '2800000') : '2800000');
 
     String typeLabel = '';
     String titleHint = '';
-    if (type == 'cost_center') {
-      typeLabel = 'مرکز هزینه جدید';
+    if (itemType == 'cost_center') {
+      typeLabel = isEditing ? 'ویرایش مرکز هزینه' : 'مرکز هزینه جدید';
       titleHint = 'نام مرکز هزینه (مثلاً: تاسیسات و موتورخانه)';
-    } else if (type == 'goods_item') {
-      typeLabel = 'دسته / نوع کالای جدید';
+    } else if (itemType == 'goods_item') {
+      typeLabel = isEditing ? 'ویرایش کالا / تجهیزات' : 'دسته / نوع کالای جدید';
       titleHint = 'نام کالا یا تجهیزات (مثلاً: عینک شنا Speedo)';
     } else {
-      typeLabel = 'پکیج آموزشی جدید';
+      typeLabel = isEditing ? 'ویرایش پکیج آموزشی' : 'پکیج آموزشی جدید';
       titleHint = 'نام دوره آموزشی (مثلاً: شنای پیشرفته ۱۲ جلسه)';
     }
 
@@ -67,11 +73,45 @@ class _DefinitionsScreenState extends State<DefinitionsScreen> with SingleTicker
                   controller: codeCtrl,
                   decoration: InputDecoration(
                     labelText: 'کد شناسایی یا نماد (اختیاری)',
-                    hintText: type == 'cost_center' ? 'مثلاً: CC-105' : 'مثلاً: GD-01',
+                    hintText: itemType == 'cost_center'
+                        ? 'مثلاً: CC-105'
+                        : (itemType == 'goods_item' ? 'مثلاً: GD-01' : 'مثلاً: PKG-BEG'),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   ),
                 ),
+                if (itemType == 'course_type') ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: sessionsCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'تعداد جلسات دوره',
+                            hintText: '۱۲',
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: priceCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'شهریه پکیج (تومان)',
+                            hintText: '۲,۸۰۰,۰۰۰',
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 12),
                 TextField(
                   controller: descCtrl,
@@ -100,18 +140,35 @@ class _DefinitionsScreenState extends State<DefinitionsScreen> with SingleTicker
                 final title = titleCtrl.text.trim();
                 if (title.isEmpty) return;
 
-                final newItem = DefinitionItem(
-                  id: 'def-${DateTime.now().millisecondsSinceEpoch}',
-                  type: type,
-                  title: title,
-                  code: codeCtrl.text.trim(),
-                  description: descCtrl.text.trim(),
-                );
+                final sessions = int.tryParse(sessionsCtrl.text.trim()) ?? 12;
+                final price = int.tryParse(priceCtrl.text.trim()) ?? 0;
 
-                context.read<AcademyProvider>().addDefinition(newItem);
+                if (isEditing) {
+                  final updatedItem = DefinitionItem(
+                    id: existingItem.id,
+                    type: existingItem.type,
+                    title: title,
+                    code: codeCtrl.text.trim(),
+                    description: descCtrl.text.trim(),
+                    sessions: itemType == 'course_type' ? sessions : null,
+                    price: itemType == 'course_type' ? price : null,
+                  );
+                  context.read<AcademyProvider>().updateDefinition(updatedItem);
+                } else {
+                  final newItem = DefinitionItem(
+                    id: 'def-${DateTime.now().millisecondsSinceEpoch}',
+                    type: itemType,
+                    title: title,
+                    code: codeCtrl.text.trim(),
+                    description: descCtrl.text.trim(),
+                    sessions: itemType == 'course_type' ? sessions : null,
+                    price: itemType == 'course_type' ? price : null,
+                  );
+                  context.read<AcademyProvider>().addDefinition(newItem);
+                }
                 Navigator.pop(ctx);
               },
-              child: const Text('ذخیره تعریف'),
+              child: Text(isEditing ? 'ذخیره تغییرات' : 'ذخیره تعریف'),
             ),
           ],
         ),
@@ -148,6 +205,8 @@ class _DefinitionsScreenState extends State<DefinitionsScreen> with SingleTicker
   }
 
   Widget _buildListTab(List<DefinitionItem> items, String type, IconData icon, Color color) {
+    final currency = NumberFormat('#,###', 'fa');
+
     if (items.isEmpty) {
       return Center(
         child: Column(
@@ -167,7 +226,7 @@ class _DefinitionsScreenState extends State<DefinitionsScreen> with SingleTicker
                 backgroundColor: const Color(0xFF0284C7),
                 foregroundColor: Colors.white,
               ),
-              onPressed: () => _showAddDialog(type),
+              onPressed: () => _showAddOrEditDialog(type: type),
             ),
           ],
         ),
@@ -179,6 +238,8 @@ class _DefinitionsScreenState extends State<DefinitionsScreen> with SingleTicker
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];
+        final isCourse = item.type == 'course_type';
+
         return Card(
           margin: const EdgeInsets.only(bottom: 10),
           elevation: 1.5,
@@ -195,10 +256,36 @@ class _DefinitionsScreenState extends State<DefinitionsScreen> with SingleTicker
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (isCourse && item.sessions != null && item.price != null) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE0F2FE),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '${item.sessions} جلسه',
+                          style: const TextStyle(color: Color(0xFF0369A1), fontWeight: FontWeight.bold, fontSize: 11),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'شهریه: ${currency.format(item.price)} تومان',
+                        style: const TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.bold, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ],
                 if (item.code.isNotEmpty)
-                  Text(
-                    'شناسه: ${item.code}',
-                    style: TextStyle(color: Colors.grey[700], fontSize: 11, fontWeight: FontWeight.w600),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      'شناسه: ${item.code}',
+                      style: TextStyle(color: Colors.grey[700], fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
                   ),
                 if (item.description != null && item.description!.isNotEmpty)
                   Text(
@@ -207,10 +294,20 @@ class _DefinitionsScreenState extends State<DefinitionsScreen> with SingleTicker
                   ),
               ],
             ),
-            trailing: IconButton(
-              icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
-              tooltip: 'حذف مورد',
-              onPressed: () => _confirmDelete(item),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined, color: Color(0xFF0284C7), size: 20),
+                  tooltip: 'ویرایش مورد',
+                  onPressed: () => _showAddOrEditDialog(existingItem: item),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                  tooltip: 'حذف مورد',
+                  onPressed: () => _confirmDelete(item),
+                ),
+              ],
             ),
           ),
         );
@@ -230,7 +327,7 @@ class _DefinitionsScreenState extends State<DefinitionsScreen> with SingleTicker
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('مدیریت تعاریف پایه', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          title: const Text('مدیریت تعاریف و پکیج‌ها', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           backgroundColor: const Color(0xFF0F172A),
           foregroundColor: Colors.white,
           bottom: TabBar(
@@ -242,6 +339,10 @@ class _DefinitionsScreenState extends State<DefinitionsScreen> with SingleTicker
             labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
             tabs: [
               Tab(
+                icon: const Icon(Icons.school_rounded, size: 20),
+                text: 'پکیج‌های دوره (${courses.length})',
+              ),
+              Tab(
                 icon: const Icon(Icons.account_balance_rounded, size: 20),
                 text: 'مراکز هزینه (${costCenters.length})',
               ),
@@ -249,19 +350,15 @@ class _DefinitionsScreenState extends State<DefinitionsScreen> with SingleTicker
                 icon: const Icon(Icons.inventory_2_rounded, size: 20),
                 text: 'انواع کالا (${goods.length})',
               ),
-              Tab(
-                icon: const Icon(Icons.school_rounded, size: 20),
-                text: 'دوره‌های آموزشی (${courses.length})',
-              ),
             ],
           ),
         ),
         body: TabBarView(
           controller: _tabController,
           children: [
+            _buildListTab(courses, 'course_type', Icons.school_rounded, const Color(0xFF0284C7)),
             _buildListTab(costCenters, 'cost_center', Icons.account_balance_rounded, const Color(0xFF4F46E5)),
             _buildListTab(goods, 'goods_item', Icons.inventory_2_rounded, const Color(0xFF0D9488)),
-            _buildListTab(courses, 'course_type', Icons.school_rounded, const Color(0xFF0284C7)),
           ],
         ),
         floatingActionButton: FloatingActionButton.extended(
@@ -271,8 +368,8 @@ class _DefinitionsScreenState extends State<DefinitionsScreen> with SingleTicker
           label: const Text('تعریف جدید'),
           onPressed: () {
             final idx = _tabController.index;
-            final type = idx == 0 ? 'cost_center' : (idx == 1 ? 'goods_item' : 'course_type');
-            _showAddDialog(type);
+            final type = idx == 0 ? 'course_type' : (idx == 1 ? 'cost_center' : 'goods_item');
+            _showAddOrEditDialog(type: type);
           },
         ),
       ),

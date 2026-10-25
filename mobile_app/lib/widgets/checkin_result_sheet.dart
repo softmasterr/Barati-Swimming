@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import '../models/athlete.dart';
 import '../models/coach.dart';
+import 'recharge_athlete_dialog.dart';
 
 class CheckinResultSheet extends StatelessWidget {
   final Map<String, dynamic> result;
@@ -229,15 +230,36 @@ class CheckinResultSheet extends StatelessWidget {
               ),
           ],
 
-          const SizedBox(height: 18),
+          if (athlete != null && athlete.remainingSessions <= 0) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const Icon(Icons.autorenew_rounded),
+                label: const Text('تمدید دوره و شارژ مجدد همین حالا', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                onPressed: () {
+                  Navigator.pop(context);
+                  RechargeAthleteDialog.show(context, athlete);
+                },
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton(
+            child: OutlinedButton(
               onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0284C7),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 13),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF0284C7),
+                side: const BorderSide(color: Color(0xFF0284C7)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: const Text('بستن و ادامه اسکن', style: TextStyle(fontWeight: FontWeight.bold)),

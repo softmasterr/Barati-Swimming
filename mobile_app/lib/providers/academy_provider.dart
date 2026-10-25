@@ -26,6 +26,9 @@ class AcademyProvider with ChangeNotifier {
   List<SyncQueueItem> _syncQueue = [];
   List<DefinitionItem> _definitions = [];
 
+  // Cooldown tracker: AthleteId -> DateTime of last check-in
+  final Map<String, DateTime> _lastCheckInTimes = {};
+
   UserSession? _currentUser;
   AppSettings _settings = AppSettings();
 
@@ -70,14 +73,30 @@ class AcademyProvider with ChangeNotifier {
   Future<void> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     _settings = AppSettings(
+      academyName: prefs.getString('academy_name') ?? 'آکادمی شنای براتی',
+      schoolId: prefs.getString('school_id') ?? 'barati-pool',
+      licenseKey: prefs.getString('license_key') ?? 'LIC-BARATI-2026-VIP',
+      subscriptionExpiry: prefs.getString('subscription_expiry') ?? '۱۴۰۵/۱۲/۲۹',
+      subscriptionStatus: prefs.getString('subscription_status') ?? 'active',
       serverUrl: prefs.getString('server_url') ?? 'https://api.barati-swimming.ir',
       apiKey: prefs.getString('server_api_key') ?? '',
       autoSync: prefs.getBool('auto_sync') ?? true,
       smsProvider: prefs.getString('sms_provider') ?? 'directSim',
       smsApiKey: prefs.getString('sms_api_key') ?? '',
       smsSenderLine: prefs.getString('sms_sender_line') ?? '10008585',
+      smsEntryTemplate: prefs.getString('sms_entry_template') ??
+          'فرزند شما {name} ساعت {time} وارد استخر شد. مانده جلسات: {sessions}',
+      smsLowBalanceTemplate: prefs.getString('sms_low_balance_template') ??
+          'اولیاء گرامی، تنها {sessions} جلسه از اعتبار دوره فرزند شما {name} در {academy} باقی مانده است. لطفاً نسبت به تمدید اقدام فرمایید.',
+      smsRechargeTemplate: prefs.getString('sms_recharge_template') ??
+          'دوره فرزند شما {name} در {academy} با موفقیت تمدید شد. پکیج: {package} • مانده جلسات جدید: {sessions}',
+      graceSessionsLimit: prefs.getInt('grace_sessions_limit') ?? 1,
+      lowSessionsThreshold: prefs.getInt('low_sessions_threshold') ?? 2,
+      cooldownMinutes: prefs.getInt('cooldown_minutes') ?? 60,
       isDemoMode: prefs.getBool('is_demo_mode') ?? true,
       isOnboardingCompleted: prefs.getBool('onboarding_completed') ?? false,
+      appVersion: '1.1.0',
+      lastSeenVersion: prefs.getString('last_seen_version') ?? '',
     );
     notifyListeners();
   }
@@ -85,14 +104,33 @@ class AcademyProvider with ChangeNotifier {
   Future<void> updateSettings(AppSettings newSettings) async {
     _settings = newSettings;
     final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('academy_name', newSettings.academyName);
+    await prefs.setString('school_id', newSettings.schoolId);
+    await prefs.setString('license_key', newSettings.licenseKey);
+    await prefs.setString('subscription_expiry', newSettings.subscriptionExpiry);
+    await prefs.setString('subscription_status', newSettings.subscriptionStatus);
     await prefs.setString('server_url', newSettings.serverUrl);
     await prefs.setString('server_api_key', newSettings.apiKey);
     await prefs.setBool('auto_sync', newSettings.autoSync);
     await prefs.setString('sms_provider', newSettings.smsProvider);
     await prefs.setString('sms_api_key', newSettings.smsApiKey);
     await prefs.setString('sms_sender_line', newSettings.smsSenderLine);
+    await prefs.setString('sms_entry_template', newSettings.smsEntryTemplate);
+    await prefs.setString('sms_low_balance_template', newSettings.smsLowBalanceTemplate);
+    await prefs.setString('sms_recharge_template', newSettings.smsRechargeTemplate);
+    await prefs.setInt('grace_sessions_limit', newSettings.graceSessionsLimit);
+    await prefs.setInt('low_sessions_threshold', newSettings.lowSessionsThreshold);
+    await prefs.setInt('cooldown_minutes', newSettings.cooldownMinutes);
     await prefs.setBool('is_demo_mode', newSettings.isDemoMode);
     await prefs.setBool('onboarding_completed', newSettings.isOnboardingCompleted);
+    await prefs.setString('last_seen_version', newSettings.lastSeenVersion);
+    notifyListeners();
+  }
+
+  Future<void> markVersionSeen(String version) async {
+    _settings.lastSeenVersion = version;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('last_seen_version', version);
     notifyListeners();
   }
 
@@ -124,6 +162,12 @@ class AcademyProvider with ChangeNotifier {
     await _db.insertDefinition(item);
     await loadDefinitions();
     FeedbackService.trigger(FeedbackType.success, 'مورد جدید با موفقیت اضافه شد');
+  }
+
+  Future<void> updateDefinition(DefinitionItem item) async {
+    await _db.updateDefinition(item);
+    await loadDefinitions();
+    FeedbackService.trigger(FeedbackType.success, 'تغییرات با موفقیت ذخیره شد');
   }
 
   Future<void> deleteDefinition(String id) async {
@@ -180,12 +224,10 @@ class AcademyProvider with ChangeNotifier {
       FeedbackService.trigger(FeedbackType.success, 'اطلاعات تستی با موفقیت پاک‌سازی شد');
     } else {
       if (!_settings.isDemoMode) {
-        // Toggled into demo mode
         _settings.isDemoMode = true;
         await _db.reseedDemoData();
         FeedbackService.trigger(FeedbackType.success, 'داده‌های تستی اولیه بارگذاری شدند');
       } else {
-        // Exited demo mode while keeping data
         _settings.isDemoMode = false;
         FeedbackService.trigger(FeedbackType.success, 'سیستم در حالت عملیاتی قرار گرفت');
       }
@@ -250,8 +292,12 @@ class AcademyProvider with ChangeNotifier {
     return '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
   }
 
+  String _formatTimeFromDate(DateTime dt) {
+    return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
   // --- Card Check-in / NFC Processing ---
-  Future<Map<String, dynamic>> processCardScan(String uid) async {
+  Future<Map<String, dynamic>> processCardScan(String uid, {bool bypassCooldown = false}) async {
     final nowTime = _formatTime();
     Athlete? athlete;
 
@@ -275,20 +321,45 @@ class AcademyProvider with ChangeNotifier {
       };
     }
 
-    // 2. Expired (0 Sessions)
-    if (athlete.remainingSessions <= 0) {
-      FeedbackService.trigger(FeedbackType.error, 'اعتبار جلسات به پایان رسیده است');
-      return {
-        'status': 'denied',
-        'title': 'اتمام اعتبار دوره',
-        'sub': 'کلیه جلسات مصرف شده است؛ لطفاً تمدید نمایید',
-        'athlete': athlete,
-      };
+    // 2. Cooldown check: Has the athlete tapped within cooldownMinutes (default 60 min)?
+    if (!bypassCooldown && _lastCheckInTimes.containsKey(athlete.id)) {
+      final diff = DateTime.now().difference(_lastCheckInTimes[athlete.id]!);
+      if (diff.inMinutes < _settings.cooldownMinutes) {
+        FeedbackService.trigger(FeedbackType.warning, 'تردد مکرر در کمتر از ۱ ساعت');
+        return {
+          'status': 'cooldown_warning',
+          'title': 'ثبت ورود مجدد (کمتر از ۱ ساعت)',
+          'sub': 'ورود قبلی در ساعت ${_formatTimeFromDate(_lastCheckInTimes[athlete.id]!)} ثبت شده بود (${diff.inMinutes} دقیقه پیش)',
+          'cardUid': uid,
+          'athlete': athlete,
+          'minutesAgo': diff.inMinutes,
+          'lastTime': _formatTimeFromDate(_lastCheckInTimes[athlete.id]!),
+        };
+      }
     }
 
-    // 3. Valid Check-in
+    // 3. Balance Check & Grace Period (Requirement 5)
+    bool isGraceEntry = false;
+    if (athlete.remainingSessions <= 0) {
+      // Check if athlete is still within grace limit
+      final bool withinGrace = (athlete.remainingSessions > -_settings.graceSessionsLimit);
+      if (withinGrace) {
+        isGraceEntry = true;
+      } else {
+        FeedbackService.trigger(FeedbackType.error, 'اتمام کامل اعتبار و جلسات ارفاقی');
+        return {
+          'status': 'denied',
+          'title': 'اتمام اعتبار دوره و جلسات ارفاقی',
+          'sub': 'کلیه جلسات اصلی و ارفاقی (${_settings.graceSessionsLimit} جلسه) مصرف شده است؛ لطفاً دوره را تمدید فرمایید.',
+          'athlete': athlete,
+        };
+      }
+    }
+
+    // 4. Valid Check-in (Regular or Grace)
     athlete.remainingSessions -= 1;
     athlete.totalAttended += 1;
+    _lastCheckInTimes[athlete.id] = DateTime.now();
     await _db.updateAthlete(athlete);
 
     final coach = _coaches.firstWhere(
@@ -305,9 +376,11 @@ class AcademyProvider with ChangeNotifier {
       ),
     );
 
-    final bool hasWarning = athlete.debt > 0 || athlete.remainingSessions == 0;
+    final bool hasWarning = isGraceEntry || athlete.debt > 0 || athlete.remainingSessions == 0;
     String warnText = 'ورود تایید شد • ۱ جلسه کسر گردید';
-    if (athlete.debt > 0) {
+    if (isGraceEntry) {
+      warnText = 'ورود ارفاقی تایید شد (اعتبار به پایان رسیده است!)';
+    } else if (athlete.debt > 0) {
       warnText = 'ورود تایید شد (دارای ${_formatCurrency(athlete.debt)} تومان بدهی)';
     } else if (athlete.remainingSessions == 0) {
       warnText = 'ورود تایید شد (جلسه آخر دوره مصرف شد!)';
@@ -324,17 +397,26 @@ class AcademyProvider with ChangeNotifier {
       time: nowTime,
       athleteName: athlete.name,
       coachName: coach.name,
-      status: hasWarning ? 'warning' : 'approved',
+      status: isGraceEntry ? 'grace_entry' : (hasWarning ? 'warning' : 'approved'),
       sessionsLeft: athlete.remainingSessions,
       note: warnText,
     );
     await _db.insertAttendanceLog(attLog);
     _attendanceLogs.insert(0, attLog);
 
-    // Create & Dispatch SMS
-    String smsContent = 'فرزند شما ${athlete.name} ساعت $nowTime وارد استخر شد. مانده جلسات: ${athlete.remainingSessions}';
-    if (athlete.debt > 0) {
+    // Format & Dispatch Entry SMS
+    String smsContent = _settings.smsEntryTemplate
+        .replaceAll('{name}', athlete.name)
+        .replaceAll('{time}', nowTime)
+        .replaceAll('{sessions}', athlete.remainingSessions.toString())
+        .replaceAll('{academy}', _settings.academyName)
+        .replaceAll('{debt}', _formatCurrency(athlete.debt));
+
+    if (athlete.debt > 0 && !smsContent.contains('{debt}')) {
       smsContent += ' (بدهی: ${_formatCurrency(athlete.debt)} ت)';
+    }
+    if (isGraceEntry) {
+      smsContent += ' [توجه: این جلسه به صورت ارفاقی ثبت شد؛ لطفاً نسبت به تمدید اقدام فرمایید]';
     }
 
     final smsStatus = _isOfflineMode ? '⏳ در صف ارسال آفلاین' : 'ارسال شده';
@@ -349,13 +431,39 @@ class AcademyProvider with ChangeNotifier {
     await _db.insertSmsLog(smsRecord);
     _smsLogs.insert(0, smsRecord);
 
-    // Attempt SMS dispatch
     if (!_isOfflineMode && athlete.phone.isNotEmpty) {
       SmsService.sendSms(
         phone: athlete.phone,
         message: smsContent,
         settings: _settings,
       );
+    }
+
+    // 5. Low Balance Reminder SMS (Requirement 6: remaining <= lowSessionsThreshold)
+    if (!isGraceEntry && athlete.remainingSessions <= _settings.lowSessionsThreshold && athlete.remainingSessions >= 0) {
+      final reminderText = _settings.smsLowBalanceTemplate
+          .replaceAll('{name}', athlete.name)
+          .replaceAll('{sessions}', athlete.remainingSessions.toString())
+          .replaceAll('{academy}', _settings.academyName);
+
+      final reminderSms = SmsLog(
+        id: 'sms-rem-${DateTime.now().millisecondsSinceEpoch}',
+        time: nowTime,
+        receiver: '${athlete.phone} (${athlete.name})',
+        event: 'یادآوری تمدید دوره',
+        text: reminderText,
+        status: _isOfflineMode ? '⏳ در صف ارسال آفلاین' : 'ارسال شده',
+      );
+      await _db.insertSmsLog(reminderSms);
+      _smsLogs.insert(0, reminderSms);
+
+      if (!_isOfflineMode && athlete.phone.isNotEmpty) {
+        SmsService.sendSms(
+          phone: athlete.phone,
+          message: reminderText,
+          settings: _settings,
+        );
+      }
     }
 
     // If Offline: Queue Sync
@@ -375,13 +483,86 @@ class AcademyProvider with ChangeNotifier {
     notifyListeners();
 
     return {
-      'status': hasWarning ? 'warning' : 'approved',
+      'status': isGraceEntry ? 'grace_entry' : (hasWarning ? 'warning' : 'approved'),
       'title': warnText,
       'sub': 'ساعت $nowTime • مانده: ${athlete.remainingSessions} جلسه',
       'athlete': athlete,
       'coach': coach,
       'smsText': smsContent,
     };
+  }
+
+  // --- Recharge / Renew Athlete (Requirement 1) ---
+  Future<void> rechargeAthlete({
+    required String athleteId,
+    required String packageName,
+    required int sessions,
+    required int price,
+    required int initialPaid,
+  }) async {
+    final athlete = _athletes.firstWhere((a) => a.id == athleteId);
+    final debt = price > initialPaid ? price - initialPaid : 0;
+
+    // Reset base if negative, then add new sessions
+    final baseSessions = athlete.remainingSessions < 0 ? 0 : athlete.remainingSessions;
+    athlete.remainingSessions = baseSessions + sessions;
+    athlete.totalSessions += sessions;
+    athlete.packageName = packageName;
+    athlete.tuitionFee += price;
+    athlete.paidAmount += initialPaid;
+    athlete.debt += debt;
+    athlete.expireDate = '۱۴۰۵/۱۱/۳۰';
+
+    await _db.updateAthlete(athlete);
+
+    if (initialPaid > 0) {
+      final tx = TransactionRecord(
+        id: 'tx-${DateTime.now().millisecondsSinceEpoch}',
+        date: '۱۴۰۵/۰۸/۲۵',
+        type: 'income',
+        title: 'شهریه تمدید دوره - ${athlete.name} ($packageName)',
+        amount: initialPaid,
+        method: 'کارتخوان پوز استخر',
+        author: _currentUser?.name ?? 'سرمربی',
+      );
+      await _db.insertTransaction(tx);
+      _transactions.insert(0, tx);
+    }
+
+    // Format & Send Renewal SMS
+    String smsContent = _settings.smsRechargeTemplate
+        .replaceAll('{name}', athlete.name)
+        .replaceAll('{package}', packageName)
+        .replaceAll('{sessions}', athlete.remainingSessions.toString())
+        .replaceAll('{academy}', _settings.academyName);
+
+    if (debt > 0) {
+      smsContent += ' (مانده بدهی: ${_formatCurrency(debt)} ت)';
+    }
+
+    if (athlete.phone.isNotEmpty) {
+      final smsRecord = SmsLog(
+        id: 'sms-rec-${DateTime.now().millisecondsSinceEpoch}',
+        time: _formatTime(),
+        receiver: '${athlete.phone} (${athlete.name})',
+        event: 'تمدید دوره آموزشی',
+        text: smsContent,
+        status: _isOfflineMode ? '⏳ در صف ارسال آفلاین' : 'ارسال شده',
+      );
+      await _db.insertSmsLog(smsRecord);
+      _smsLogs.insert(0, smsRecord);
+
+      if (!_isOfflineMode) {
+        SmsService.sendSms(
+          phone: athlete.phone,
+          message: smsContent,
+          settings: _settings,
+        );
+      }
+    }
+
+    FeedbackService.trigger(FeedbackType.success, 'دوره ${athlete.name} با موفقیت تمدید شد');
+    notifyListeners();
   }
 
   // --- Register Athlete ---
@@ -423,7 +604,7 @@ class AcademyProvider with ChangeNotifier {
         title: 'شهریه ثبت‌نام - $name',
         amount: initialPaid,
         method: 'نقدی / پوز',
-        author: _currentUser?.name ?? 'سرمربی براتی',
+        author: _currentUser?.name ?? 'سرمربی',
       );
       await _db.insertTransaction(tx);
       _transactions.insert(0, tx);
@@ -469,7 +650,7 @@ class AcademyProvider with ChangeNotifier {
       title: 'دریافت شهریه - ${athlete.name} ($note)',
       amount: amount,
       method: method,
-      author: _currentUser?.name ?? 'سرمربی براتی',
+      author: _currentUser?.name ?? 'سرمربی',
     );
     await _db.insertTransaction(tx);
     _transactions.insert(0, tx);
@@ -500,7 +681,7 @@ class AcademyProvider with ChangeNotifier {
       title: '$category: $title',
       amount: amount,
       method: 'حساب جاری استخر',
-      author: _currentUser?.name ?? 'سرمربی براتی',
+      author: _currentUser?.name ?? 'سرمربی',
     );
     await _db.insertTransaction(tx);
     _transactions.insert(0, tx);
@@ -522,7 +703,7 @@ class AcademyProvider with ChangeNotifier {
       title: 'تسویه دستمزد - ${coach.name} (ارجاع: $ref)',
       amount: amount,
       method: 'واریز بانکی / پایا',
-      author: _currentUser?.name ?? 'سرمربی براتی',
+      author: _currentUser?.name ?? 'سرمربی',
     );
     await _db.insertTransaction(tx);
     _transactions.insert(0, tx);
@@ -539,9 +720,8 @@ class AcademyProvider with ChangeNotifier {
     try {
       final uri = Uri.parse('$targetUrl/health');
       final res = await http.get(uri).timeout(const Duration(seconds: 4));
-      return res.statusCode == 200 || res.statusCode == 404; // Server responded
+      return res.statusCode == 200 || res.statusCode == 404;
     } catch (_) {
-      // In offline/test environments, consider URL format valid
       return targetUrl.startsWith('http');
     }
   }
@@ -553,6 +733,8 @@ class AcademyProvider with ChangeNotifier {
 
     try {
       final syncPayload = {
+        'schoolId': _settings.schoolId,
+        'licenseKey': _settings.licenseKey,
         'timestamp': DateTime.now().toIso8601String(),
         'athletesCount': _athletes.length,
         'transactionsCount': _transactions.length,
@@ -572,10 +754,9 @@ class AcademyProvider with ChangeNotifier {
             )
             .timeout(const Duration(seconds: 5));
       }
-      FeedbackService.trigger(FeedbackType.success, 'همگام‌سازی ابری با سرور با موفقیت انجام شد');
+      FeedbackService.trigger(FeedbackType.success, 'همگام‌سازی ابری با موفقیت انجام شد');
     } catch (_) {
-      // Offline fallback
-      FeedbackService.trigger(FeedbackType.warning, 'ارتباط با سرور ابری برقرار نشد؛ اطلاعات در صف ذخیره شد');
+      FeedbackService.trigger(FeedbackType.warning, 'ارتباط با سرور ابری برقرار نشد؛ اطلاعات در صف محلی ذخیره شد');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -593,7 +774,6 @@ class AcademyProvider with ChangeNotifier {
     await _db.clearSyncQueue();
     _syncQueue.clear();
 
-    // Mark pending SMS as sent
     for (var sms in _smsLogs) {
       if (sms.status.contains('صف')) {
         sms.status = 'تحویل شده به گوشی';

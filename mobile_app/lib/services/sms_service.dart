@@ -21,18 +21,22 @@ class SmsService {
     // 1. Direct SIM Card on Phone
     if (settings.smsProvider == 'directSim') {
       try {
-        final Uri smsUri = Uri(
-          scheme: 'sms',
-          path: phone,
-          queryParameters: <String, String>{
-            'body': message,
-          },
-        );
+        final cleanPhone = phone.replaceAll(RegExp(r'\s+'), '');
+        final encodedBody = Uri.encodeComponent(message);
+        final Uri smsUri = Uri.parse('sms:$cleanPhone?body=$encodedBody');
+
         if (await canLaunchUrl(smsUri)) {
-          await launchUrl(smsUri);
+          await launchUrl(smsUri, mode: LaunchMode.externalApplication);
           return SmsResult(success: true, message: 'برنامه پیامک سیم‌کارت گوشی باز شد');
         } else {
-          return SmsResult(success: false, message: 'عدم امکان باز کردن برنامه پیامک سیم‌کارت');
+          final Uri smstoUri = Uri.parse('smsto:$cleanPhone?body=$encodedBody');
+          if (await canLaunchUrl(smstoUri)) {
+            await launchUrl(smstoUri, mode: LaunchMode.externalApplication);
+            return SmsResult(success: true, message: 'برنامه پیامک سیم‌کارت باز شد');
+          }
+          // Direct launch attempt
+          await launchUrl(smsUri, mode: LaunchMode.externalApplication);
+          return SmsResult(success: true, message: 'درخواست ارسال به پیام‌رسان گوشی تحویل شد');
         }
       } catch (e) {
         return SmsResult(success: false, message: 'خطا در ارسال پیامک سیم‌کارت: $e');

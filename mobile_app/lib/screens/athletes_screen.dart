@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/academy_provider.dart';
 import '../models/athlete.dart';
 import '../models/coach.dart';
+import '../widgets/recharge_athlete_dialog.dart';
 
 class AthletesScreen extends StatefulWidget {
   const AthletesScreen({super.key});
@@ -27,14 +28,16 @@ class _AthletesScreenState extends State<AthletesScreen> {
     final uidCtrl = TextEditingController();
 
     String selectedCoach = coaches.isNotEmpty ? coaches.first.id : '';
-    String selectedPkg = 'آموزش مقدماتی (۱۲ جلسه)';
-    int sessions = 12;
-    int price = 2800000;
+    final definedPackages = provider.getDefinitionsByType('course_type');
+    String selectedPkg = definedPackages.isNotEmpty ? definedPackages.first.title : 'آموزش مقدماتی (۱۲ جلسه)';
+    int sessions = definedPackages.isNotEmpty ? (definedPackages.first.sessions ?? 12) : 12;
+    int price = definedPackages.isNotEmpty ? (definedPackages.first.price ?? 2800000) : 2800000;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) {
+          final currency = NumberFormat('#,###', 'fa');
           return Directionality(
             textDirection: TextDirection.rtl,
             child: AlertDialog(
@@ -64,21 +67,40 @@ class _AthletesScreenState extends State<AthletesScreen> {
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
                       value: selectedPkg,
+                      isExpanded: true,
                       decoration: const InputDecoration(labelText: 'پکیج آموزشی', isDense: true),
-                      items: const [
-                        DropdownMenuItem(value: 'آموزش مقدماتی (۱۲ جلسه)', child: Text('آموزش مقدماتی (۱۲ جلسه - ۲,۸۰۰,۰۰۰ ت)')),
-                        DropdownMenuItem(value: 'آموزش پیشرفته (۱۲ جلسه)', child: Text('آموزش پیشرفته (۱۲ جلسه - ۳,۵۰۰,۰۰۰ ت)')),
-                        DropdownMenuItem(value: 'تیم مسابقات (۲۴ جلسه)', child: Text('تیم مسابقات (۲۴ جلسه - ۵,۸۰۰,۰۰۰ ت)')),
-                      ],
+                      items: definedPackages.isNotEmpty
+                          ? definedPackages
+                              .map((c) => DropdownMenuItem(
+                                    value: c.title,
+                                    child: Text(
+                                      '${c.title} (${c.sessions ?? 12} ج - ${currency.format(c.price ?? 0)} ت)',
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                  ))
+                              .toList()
+                          : const [
+                              DropdownMenuItem(value: 'آموزش مقدماتی (۱۲ جلسه)', child: Text('آموزش مقدماتی (۱۲ جلسه - ۲,۸۰۰,۰۰۰ ت)')),
+                              DropdownMenuItem(value: 'آموزش پیشرفته (۱۲ جلسه)', child: Text('آموزش پیشرفته (۱۲ جلسه - ۳,۵۰۰,۰۰۰ ت)')),
+                              DropdownMenuItem(value: 'تیم مسابقات (۲۴ جلسه)', child: Text('تیم مسابقات (۲۴ جلسه - ۵,۸۰۰,۰۰۰ ت)')),
+                            ],
                       onChanged: (val) {
                         setDialogState(() {
                           selectedPkg = val!;
-                          if (val.contains('پیشرفته')) {
-                            sessions = 12; price = 3500000;
-                          } else if (val.contains('مسابقات')) {
-                            sessions = 24; price = 5800000;
+                          if (definedPackages.isNotEmpty) {
+                            try {
+                              final found = definedPackages.firstWhere((p) => p.title == val);
+                              sessions = found.sessions ?? 12;
+                              price = found.price ?? 0;
+                            } catch (_) {}
                           } else {
-                            sessions = 12; price = 2800000;
+                            if (val.contains('پیشرفته')) {
+                              sessions = 12; price = 3500000;
+                            } else if (val.contains('مسابقات')) {
+                              sessions = 24; price = 5800000;
+                            } else {
+                              sessions = 12; price = 2800000;
+                            }
                           }
                         });
                       },
@@ -437,6 +459,18 @@ class _AthletesScreenState extends State<AthletesScreen> {
                                     ),
                                     Row(
                                       children: [
+                                        OutlinedButton.icon(
+                                          style: OutlinedButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            visualDensity: VisualDensity.compact,
+                                            foregroundColor: const Color(0xFF10B981),
+                                            side: const BorderSide(color: Color(0xFF10B981)),
+                                          ),
+                                          icon: const Icon(Icons.autorenew_rounded, size: 14),
+                                          label: const Text('تمدید', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                          onPressed: () => RechargeAthleteDialog.show(context, athlete),
+                                        ),
+                                        const SizedBox(width: 4),
                                         OutlinedButton(
                                           style: OutlinedButton.styleFrom(
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -445,10 +479,10 @@ class _AthletesScreenState extends State<AthletesScreen> {
                                           onPressed: () => _showAssignCardDialog(athlete),
                                           child: const Text('مچ‌بند', style: TextStyle(fontSize: 11)),
                                         ),
-                                        const SizedBox(width: 6),
+                                        const SizedBox(width: 4),
                                         ElevatedButton(
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: const Color(0xFF10B981),
+                                            backgroundColor: const Color(0xFF0284C7),
                                             foregroundColor: Colors.white,
                                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
                                             visualDensity: VisualDensity.compact,

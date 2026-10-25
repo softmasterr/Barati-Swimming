@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/academy_provider.dart';
 import '../models/app_settings.dart';
 import '../services/sms_service.dart';
+import '../widgets/changelog_dialog.dart';
 import 'onboarding_screen.dart';
 import 'login_screen.dart';
 
@@ -14,10 +15,24 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  late TextEditingController _academyNameCtrl;
+  late TextEditingController _schoolIdCtrl;
+  late TextEditingController _licenseKeyCtrl;
+  late TextEditingController _subscriptionExpiryCtrl;
+
   late TextEditingController _serverUrlCtrl;
   late TextEditingController _apiKeyCtrl;
+
   late TextEditingController _smsApiKeyCtrl;
   late TextEditingController _smsSenderLineCtrl;
+
+  late TextEditingController _smsEntryCtrl;
+  late TextEditingController _smsLowBalanceCtrl;
+  late TextEditingController _smsRechargeCtrl;
+
+  late TextEditingController _graceSessionsCtrl;
+  late TextEditingController _lowSessionsCtrl;
+  late TextEditingController _cooldownCtrl;
 
   late String _smsProvider;
   late bool _autoSync;
@@ -30,10 +45,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     final settings = context.read<AcademyProvider>().settings;
+
+    _academyNameCtrl = TextEditingController(text: settings.academyName);
+    _schoolIdCtrl = TextEditingController(text: settings.schoolId);
+    _licenseKeyCtrl = TextEditingController(text: settings.licenseKey);
+    _subscriptionExpiryCtrl = TextEditingController(text: settings.subscriptionExpiry);
+
     _serverUrlCtrl = TextEditingController(text: settings.serverUrl);
     _apiKeyCtrl = TextEditingController(text: settings.apiKey);
+
     _smsApiKeyCtrl = TextEditingController(text: settings.smsApiKey);
     _smsSenderLineCtrl = TextEditingController(text: settings.smsSenderLine);
+
+    _smsEntryCtrl = TextEditingController(text: settings.smsEntryTemplate);
+    _smsLowBalanceCtrl = TextEditingController(text: settings.smsLowBalanceTemplate);
+    _smsRechargeCtrl = TextEditingController(text: settings.smsRechargeTemplate);
+
+    _graceSessionsCtrl = TextEditingController(text: settings.graceSessionsLimit.toString());
+    _lowSessionsCtrl = TextEditingController(text: settings.lowSessionsThreshold.toString());
+    _cooldownCtrl = TextEditingController(text: settings.cooldownMinutes.toString());
+
     _smsProvider = settings.smsProvider;
     _autoSync = settings.autoSync;
     _isDemoMode = settings.isDemoMode;
@@ -41,30 +72,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   void dispose() {
+    _academyNameCtrl.dispose();
+    _schoolIdCtrl.dispose();
+    _licenseKeyCtrl.dispose();
+    _subscriptionExpiryCtrl.dispose();
     _serverUrlCtrl.dispose();
     _apiKeyCtrl.dispose();
     _smsApiKeyCtrl.dispose();
     _smsSenderLineCtrl.dispose();
+    _smsEntryCtrl.dispose();
+    _smsLowBalanceCtrl.dispose();
+    _smsRechargeCtrl.dispose();
+    _graceSessionsCtrl.dispose();
+    _lowSessionsCtrl.dispose();
+    _cooldownCtrl.dispose();
     super.dispose();
   }
 
   void _saveSettings() {
     final provider = context.read<AcademyProvider>();
+
+    final graceLimit = int.tryParse(_graceSessionsCtrl.text.trim()) ?? 1;
+    final lowThreshold = int.tryParse(_lowSessionsCtrl.text.trim()) ?? 2;
+    final cooldown = int.tryParse(_cooldownCtrl.text.trim()) ?? 60;
+
     final newSettings = AppSettings(
+      academyName: _academyNameCtrl.text.trim(),
+      schoolId: _schoolIdCtrl.text.trim(),
+      licenseKey: _licenseKeyCtrl.text.trim(),
+      subscriptionExpiry: _subscriptionExpiryCtrl.text.trim(),
+      subscriptionStatus: provider.settings.subscriptionStatus,
       serverUrl: _serverUrlCtrl.text.trim(),
       apiKey: _apiKeyCtrl.text.trim(),
       smsProvider: _smsProvider,
       smsApiKey: _smsApiKeyCtrl.text.trim(),
       smsSenderLine: _smsSenderLineCtrl.text.trim(),
+      smsEntryTemplate: _smsEntryCtrl.text.trim(),
+      smsLowBalanceTemplate: _smsLowBalanceCtrl.text.trim(),
+      smsRechargeTemplate: _smsRechargeCtrl.text.trim(),
+      graceSessionsLimit: graceLimit,
+      lowSessionsThreshold: lowThreshold,
+      cooldownMinutes: cooldown,
       autoSync: _autoSync,
       isDemoMode: _isDemoMode,
       isOnboardingCompleted: provider.settings.isOnboardingCompleted,
+      appVersion: provider.settings.appVersion,
+      lastSeenVersion: provider.settings.lastSeenVersion,
     );
 
     provider.updateSettings(newSettings);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('تنظیمات با موفقیت ذخیره شد'),
+        content: Text('تنظیمات با موفقیت ذخیره و اعمال شد'),
         backgroundColor: Colors.green,
       ),
     );
@@ -74,7 +133,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final provider = context.read<AcademyProvider>();
 
     if (!newValue) {
-      // User is turning OFF demo mode -> Ask if they want to delete or keep demo data
       showDialog(
         context: context,
         builder: (ctx) => Directionality(
@@ -129,7 +187,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       );
     } else {
-      // User is turning ON demo mode
       setState(() => _isDemoMode = true);
       provider.toggleDemoMode(clearData: false);
       _saveSettings();
@@ -161,6 +218,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _testSmsDispatch() async {
     setState(() => _isTestingSms = true);
     final dummySettings = AppSettings(
+      academyName: _academyNameCtrl.text.trim(),
       smsProvider: _smsProvider,
       smsApiKey: _smsApiKeyCtrl.text.trim(),
       smsSenderLine: _smsSenderLineCtrl.text.trim(),
@@ -168,7 +226,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     final res = await SmsService.sendSms(
       phone: '09120000000',
-      message: 'پیامک تستی سامانه آکادمی شنای براتی',
+      message: 'پیامک تستی سامانه ${_academyNameCtrl.text.trim()}',
       settings: dummySettings,
     );
 
@@ -289,6 +347,364 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             const SizedBox(height: 16),
 
+            // Academy & School Profile (Requirement 2 & 9)
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.pool_rounded, color: Color(0xFF0284C7)),
+                        SizedBox(width: 8),
+                        Text(
+                          'مشخصات و نام آکادمی شنا',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: _academyNameCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'نام رسمی آکادمی / مدرسه شنا *',
+                        hintText: 'مثلاً: آکادمی شنای براتی',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'این نام در هدر سامانه، پیامک‌های ارسالی به اولیاء و رسیدهای پرداختی نمایش داده می‌شود.',
+                      style: TextStyle(color: Colors.grey, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Subscription & Multi-Tenant SaaS License (Requirement 9)
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.verified_rounded, color: Color(0xFF10B981)),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'لایسنس و اشتراک مدرسه شنا (سایر استخرها)',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFDCFCE7),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text('اشتراک فعال VIP', style: TextStyle(color: Color(0xFF15803D), fontSize: 11, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _schoolIdCtrl,
+                            decoration: InputDecoration(
+                              labelText: 'شناسه اختصاصی استخر / مدرسه',
+                              hintText: 'barati-pool',
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextField(
+                            controller: _subscriptionExpiryCtrl,
+                            decoration: InputDecoration(
+                              labelText: 'تاریخ انقضای اشتراک',
+                              hintText: '۱۴۰۵/۱۲/۲۹',
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _licenseKeyCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'کد لایسنس فعال‌سازی اشتراک',
+                        hintText: 'LIC-XXXX-YYYY',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'سایر مدارس و باشگاه‌های شنا می‌توانند با وارد کردن کد لایسنس و شناسه مدرسه خود، از این نرم‌افزار با برند، لوگو و دیتابیس اختصاصی خود بهره‌برداری کنند.',
+                      style: TextStyle(color: Colors.grey, fontSize: 11, height: 1.5),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Rules & Gate Behavior (Requirements 3, 5, 6)
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.rule_rounded, color: Color(0xFFF59E0B)),
+                        SizedBox(width: 8),
+                        Text(
+                          'قوانین تردد، جلسات ارفاقی و اعلان‌ها',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Grace Sessions Limit (Requirement 5)
+                    TextField(
+                      controller: _graceSessionsCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'تعداد جلسات مجاز پس از اتمام دوره (جلسات ارفاقی)',
+                        hintText: '۱',
+                        suffixText: 'جلسه',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'شناگرانی که موجودی جلساتشان صفر شده، تا این سقف اجازه ورود ارفاقی خواهند داشت تا پشت گیت معطل نمانند.',
+                      style: TextStyle(color: Colors.grey, fontSize: 10),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Cooldown Minutes (Requirement 3)
+                    TextField(
+                      controller: _cooldownCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'محدودیت زمانی کارت زدن مکرر (دقیقه)',
+                        hintText: '۶۰',
+                        suffixText: 'دقیقه',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'اگر شناگری در کمتر از این مدت مجدداً کارت بزند، سیستم از مربی تاییدیه می‌گیرد تا از کسر ناخواسته جلسه جلوگیری شود.',
+                      style: TextStyle(color: Colors.grey, fontSize: 10),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Low Sessions Threshold (Requirement 6)
+                    TextField(
+                      controller: _lowSessionsCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'آستانه ارسال پیامک یادآوری تمدید (مانده جلسات)',
+                        hintText: '۲',
+                        suffixText: 'جلسه',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'وقتی اعتبار دوره به این تعداد جلسه یا کمتر برسد، پیامک یادآوری تمدید خودکار به اولیاء ارسال خواهد شد.',
+                      style: TextStyle(color: Colors.grey, fontSize: 10),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // SMS Templates Configuration (Requirements 2 & 6)
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.edit_note_rounded, color: Color(0xFF0D9488)),
+                        SizedBox(width: 8),
+                        Text(
+                          'شخصی‌سازی متن پیامک‌ها (قالب‌های ارسالی)',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'متغیرهای قابل استفاده در متن: {name} (نام شناگر) ، {time} (ساعت) ، {sessions} (مانده جلسات) ، {academy} (نام استخر) ، {package} (پکیج دوره)',
+                      style: TextStyle(color: Color(0xFF0D9488), fontSize: 11, fontWeight: FontWeight.bold, height: 1.5),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Entry SMS Template
+                    TextField(
+                      controller: _smsEntryCtrl,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        labelText: 'قالب پیامک ثبت تردد و ورود شناگر',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Low Balance SMS Template (Requirement 6)
+                    TextField(
+                      controller: _smsLowBalanceCtrl,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        labelText: 'قالب پیامک هشدار کسر موجودی و یادآوری تمدید',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Recharge SMS Template (Requirement 1)
+                    TextField(
+                      controller: _smsRechargeCtrl,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        labelText: 'قالب پیامک شارژ و تمدید دوره',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // SMS Gateway Configuration (Requirement 7)
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.sms_rounded, color: Color(0xFF0D9488)),
+                        SizedBox(width: 8),
+                        Text(
+                          'تنظیمات درگاه پیامک و سیم‌کارت',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    DropdownButtonFormField<String>(
+                      value: _smsProvider,
+                      decoration: InputDecoration(
+                        labelText: 'روش ارسال پیامک',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'directSim',
+                          child: Text('📱 سیم‌کارت گوشی (اصلاح‌شده، مستقیم از گوشی بدون وب‌سرویس)'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'kavenegar',
+                          child: Text('🌐 وب‌سرویس کاوه‌نگار (Kavenegar API)'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'farazsms',
+                          child: Text('🌐 وب‌سرویس فراز اس‌ام‌اس / IPPanel'),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) setState(() => _smsProvider = val);
+                      },
+                    ),
+                    if (_smsProvider != 'directSim') ...[
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _smsApiKeyCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'کلید دسترسی (API Key)',
+                          hintText: _smsProvider == 'kavenegar' ? 'مثلاً: 636A4F...' : 'مثلاً: eyJhbGciOi...',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _smsSenderLineCtrl,
+                        decoration: InputDecoration(
+                          labelText: _smsProvider == 'farazsms' ? 'کد پترن / خط خدماتی' : 'شماره خط فرستنده (مثلاً: 10008585)',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF0D9488),
+                          side: const BorderSide(color: Color(0xFF0D9488)),
+                        ),
+                        icon: _isTestingSms
+                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.send_rounded, size: 18),
+                        label: const Text('ارسال پیامک تستی به مربی'),
+                        onPressed: _isTestingSms ? null : _testSmsDispatch,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
             // Demo Mode Card (Requirement 5)
             Card(
               elevation: 2,
@@ -350,7 +766,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             const SizedBox(height: 16),
 
-            // Cloud Server Sync (Requirement 3)
+            // Cloud Server Sync
             Card(
               elevation: 2,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -438,95 +854,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             const SizedBox(height: 16),
 
-            // SMS Gateway Configuration (Requirement 4)
+            // App Version & What's New (Requirement 4)
             Card(
               elevation: 2,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.sms_rounded, color: Color(0xFF0D9488)),
-                        SizedBox(width: 8),
-                        Text(
-                          'تنظیمات درگاه پیامک و سیم‌کارت',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    DropdownButtonFormField<String>(
-                      value: _smsProvider,
-                      decoration: InputDecoration(
-                        labelText: 'روش ارسال پیامک',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'directSim',
-                          child: Text('📱 سیم‌کارت گوشی (بدون نیاز به اینترنت و وب‌سرویس)'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'kavenegar',
-                          child: Text('🌐 وب‌سرویس کاوه‌نگار (Kavenegar API)'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'farazsms',
-                          child: Text('🌐 وب‌سرویس فراز اس‌ام‌اس / IPPanel'),
-                        ),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) setState(() => _smsProvider = val);
-                      },
-                    ),
-                    if (_smsProvider != 'directSim') ...[
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _smsApiKeyCtrl,
-                        decoration: InputDecoration(
-                          labelText: 'کلید دسترسی (API Key)',
-                          hintText: _smsProvider == 'kavenegar' ? 'مثلاً: 636A4F...' : 'مثلاً: eyJhbGciOi...',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _smsSenderLineCtrl,
-                        decoration: InputDecoration(
-                          labelText: _smsProvider == 'farazsms' ? 'کد پترن / خط خدماتی' : 'شماره خط فرستنده (مثلاً: 10008585)',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 14),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF0D9488),
-                          side: const BorderSide(color: Color(0xFF0D9488)),
-                        ),
-                        icon: _isTestingSms
-                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.send_rounded, size: 18),
-                        label: const Text('ارسال پیامک تستی به مربی'),
-                        onPressed: _isTestingSms ? null : _testSmsDispatch,
-                      ),
-                    ),
-                  ],
+              child: ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0284C7).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.info_outline_rounded, color: Color(0xFF0284C7)),
+                ),
+                title: Text(
+                  'نسخه نرم‌افزار: ${provider.settings.appVersion} (نسخه جدید)',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                subtitle: const Text('مشاهده فهرست تغییرات و امکانات اضافه شده در این نسخه', style: TextStyle(fontSize: 11)),
+                trailing: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0284C7),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  onPressed: () => ChangelogDialog.show(context, version: provider.settings.appVersion),
+                  child: const Text('تغییرات نسخه', style: TextStyle(fontSize: 11)),
                 ),
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
 
-            // Onboarding Revisit (Requirement 6)
+            // Onboarding Revisit
             ListTile(
               tileColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -547,15 +908,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // Save Button
             SizedBox(
               width: double.infinity,
-              height: 48,
+              height: 50,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0284C7),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 2,
                 ),
                 icon: const Icon(Icons.save_rounded),
-                label: const Text('ذخیره و اعمال تنظیمات', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                label: const Text('ذخیره و اعمال کلیه تنظیمات', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                 onPressed: _saveSettings,
               ),
             ),
