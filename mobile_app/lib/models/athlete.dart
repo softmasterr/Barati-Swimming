@@ -4,14 +4,14 @@ class Athlete {
   final String phone;
   final String coachId;
   String cardUid;
-  final String packageName;
-  final int totalSessions;
+  String packageName;
+  int totalSessions;
   int remainingSessions;
   int totalAttended;
-  final int tuitionFee;
+  int tuitionFee;
   int paidAmount;
   int debt;
-  final String expireDate;
+  String expireDate;
 
   Athlete({
     required this.id,
