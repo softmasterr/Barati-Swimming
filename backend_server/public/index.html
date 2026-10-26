@@ -859,6 +859,13 @@
     let currentSessionToken = localStorage.getItem('barati_admin_token') || null;
 
     document.addEventListener('DOMContentLoaded', () => {
+      const step1Form = document.getElementById('step1-form');
+      if (step1Form) {
+        step1Form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          handleInitialLogin(e);
+        });
+      }
       if (currentSessionToken) {
         verifySession();
       }

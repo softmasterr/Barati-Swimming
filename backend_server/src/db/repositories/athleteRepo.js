@@ -316,7 +316,7 @@ export class AthleteRepository {
     const safeLimit = !Number.isNaN(Number(limit)) ? Math.max(0, Number(limit)) : 200;
     const safeOffset = !Number.isNaN(Number(offset)) ? Math.max(0, Number(offset)) : 0;
     const rows = this.db.prepare(`
-      SELECT * FROM athletes ORDER BY updated_at DESC LIMIT ? OFFSET ?
+      SELECT * FROM athletes ORDER BY synced_at DESC LIMIT ? OFFSET ?
     `).all(safeLimit, safeOffset);
     return rows.map(r => this._mapRow(r));
   }
