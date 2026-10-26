@@ -5,6 +5,9 @@ on:
     branches: [ main, master ]
   workflow_dispatch: # Allows manual trigger from GitHub UI
 
+permissions:
+  contents: write
+
 jobs:
   build-apk:
     name: Compile & Build Release APK
@@ -36,11 +39,46 @@ jobs:
 
       - name: Build Android Release APK
         working-directory: ./mobile_app
-        run: flutter build apk --release
+        run: flutter build apk --release --build-number=${{ github.run_number }}
+
+      - name: Prepare APK Release Artifacts
+        run: |
+          cp mobile_app/build/app/outputs/flutter-apk/app-release.apk mobile_app/build/app/outputs/flutter-apk/barati-swimming-release.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Barati-Swimming-Android-APK
-          path: mobile_app/build/app/outputs/flutter-apk/app-release.apk
+          path: mobile_app/build/app/outputs/flutter-apk/barati-swimming-release.apk
           if-no-files-found: error
+
+      - name: Publish Official GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        with:
+          tag_name: v1.1.0-release
+          name: "نسخه رسمی v1.1.0 آکادمی شنای براتی (Android Release)"
+          body: |
+            ## 🏊‍♂️ نسخه رسمی اپلیکیشن آکادمی شنای براتی (Barati Swimming Academy)
+
+            این نسخه مجهز به **امضای دیجیتال پایدار و ثابت (Release Keystore)** است؛ از این پس برای نصب بروزرسانی‌ها **هرگز نیازی به حذف نسخه قبلی نیست** و با نصب نسخه جدید روی نسخه قبلی، تمامی اطلاعات شناگران، تنظیمات و پایگاه‌داده محلی حفظ می‌شوند.
+
+            ### ✨ قابلیت‌ها و تغییرات نسخه ۱.۱.۰:
+            - **بروزرسانی مستقیم بدون حذف:** امضای یکپارچه Release Keystore و ارتقای خودکار شناسه بیلد.
+            - **مدیریت کامل مربیان:** افزودن، ویرایش مشخصات، شماره تماس، تعیین مدل قرارداد (درصدی، جلسه‌ای یا حقوق ثابت) و ثبت تسویه‌حساب مالی.
+            - **مدیریت دوره‌ها و پکیج‌ها در تنظیمات:** امکان تغییر نام دوره‌ها، تعداد جلسات و مبالغ شهریه در بخش تنظیمات و اعمال خودکار آن در کارت جدید و ثبت‌نام.
+            - **سیستم شارژ و تمدید دوره شناگران:** تمدید آسان دوره، تسویه یا کسر بدهی و ثبت سند مالی همراه با پیامک اطلاع‌رسانی.
+            - **ارسال مستقیم پیامک از سیم‌کارت:** ارسال خودکار پیامک تمدید و هشدار کاهش جلسات باقی‌مانده به خانواده‌ها بدون نیاز به سامانه اینترنتی.
+            - **محدودیت تردد زیر ۱ ساعت:** دیالوگ تأییدیه مربی در صورت کارت زدن مجدد در کمتر از ۱ ساعت.
+            - **اتصال امن به سرور ابری:** همگام‌سازی لحظه‌ای با سرور Docker و پلتفرم لیارا همراه با رمزنگاری پیشرفته AES-256-GCM.
+
+            ---
+            ### 📥 دانلود و نصب مستقیم:
+            فایل **`barati-swimming-release.apk`** را از بخش **Assets** در زیر دانلود کرده و مستقیماً روی گوشی یا تبلت اندروید خود نصب فرمایید.
+          files: |
+            mobile_app/build/app/outputs/flutter-apk/barati-swimming-release.apk
+            mobile_app/build/app/outputs/flutter-apk/app-release.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

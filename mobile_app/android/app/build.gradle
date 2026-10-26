@@ -22,6 +22,15 @@ if (flutterVersionName == null) {
     flutterVersionName = '1.0'
 }
 
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (!keystorePropertiesFile.exists()) {
+    keystorePropertiesFile = project.file('key.properties')
+}
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace "com.barati.swimming"
     compileSdkVersion 34
@@ -49,9 +58,18 @@ android {
         multiDexEnabled true
     }
 
+    signingConfigs {
+        release {
+            keyAlias keystoreProperties['keyAlias'] ?: 'barati_release_key'
+            keyPassword keystoreProperties['keyPassword'] ?: 'Barati2026Release!'
+            storeFile file(keystoreProperties['storeFile'] ?: 'barati_release.jks')
+            storePassword keystoreProperties['storePassword'] ?: 'Barati2026Release!'
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             minifyEnabled false
             shrinkResources false
         }
