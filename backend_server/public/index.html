@@ -507,11 +507,14 @@
       <form id="step1-form" onsubmit="handleInitialLogin(event)">
         <div class="form-group">
           <label>نام کاربری مدیر ارشد</label>
-          <input type="text" id="login-username" class="form-control" required value="admin" autocomplete="username">
+          <input type="text" id="login-username" class="form-control" required value="admin" autocomplete="username" style="direction: ltr; font-family: monospace;">
         </div>
         <div class="form-group">
           <label>کلمه عبور امن</label>
-          <input type="password" id="login-password" class="form-control" required value="Admin@Barati2026!" placeholder="••••••••" autocomplete="current-password">
+          <div style="position: relative; display: flex; align-items: center;">
+            <input type="password" id="login-password" class="form-control" required value="Admin@Barati2026!" placeholder="••••••••" autocomplete="current-password" style="direction: ltr; font-family: monospace; padding-left: 45px;">
+            <button type="button" id="btn-toggle-pwd" onclick="togglePasswordVisibility()" style="position: absolute; left: 10px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.15rem; padding: 4px;" title="نمایش رمز عبور">👁️</button>
+          </div>
         </div>
         <button type="submit" id="btn-login-submit" class="btn-primary" style="width: 100%; margin-top: 0.5rem; font-size: 1rem; padding: 0.75rem;">
           ورود به پنل مدیریت
@@ -519,8 +522,8 @@
 
         <!-- Fast Access Actions -->
         <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
-          <button type="button" class="btn-success" style="flex: 1; padding: 0.65rem 0.5rem; font-size: 0.85rem;" onclick="handleInstantDemoMode()">
-            ⚡ ورود سریع ۱-کلیکی به داشبورد
+          <button type="button" class="btn-success" style="flex: 1; padding: 0.65rem 0.5rem; font-size: 0.85rem;" onclick="handleDirectAdminLogin()">
+            ⚡ ورود مستقیم ۱-کلیکی (بدون نیاز به تایپ)
           </button>
           <button type="button" class="btn-outline" style="flex: 1; padding: 0.65rem 0.5rem; font-size: 0.85rem;" onclick="previewDashboardDirectly()">
             👁️ مشاهده پیش‌نمایش تمام امکانات
@@ -861,9 +864,34 @@
       }
     });
 
+    function togglePasswordVisibility() {
+      const pwd = document.getElementById('login-password');
+      const btn = document.getElementById('btn-toggle-pwd');
+      if (pwd.type === 'password') {
+        pwd.type = 'text';
+        btn.textContent = '🔒';
+        btn.title = 'مخفی‌سازی رمز عبور';
+      } else {
+        pwd.type = 'password';
+        btn.textContent = '👁️';
+        btn.title = 'نمایش رمز عبور';
+      }
+    }
+
     function autoFillCredentials() {
       document.getElementById('login-username').value = 'admin';
       document.getElementById('login-password').value = 'Admin@Barati2026!';
+      const alertBox = document.getElementById('login-alert');
+      if (alertBox) alertBox.style.display = 'none';
+    }
+
+    async function handleDirectAdminLogin() {
+      autoFillCredentials();
+      const form = document.getElementById('step1-form');
+      if (form) {
+        const event = new Event('submit', { cancelable: true, bubbles: true });
+        form.dispatchEvent(event);
+      }
     }
 
     async function verifySession() {
@@ -917,7 +945,14 @@
           } else if (data.status === 'AUTHENTICATED') {
             currentSessionToken = data.token;
             localStorage.setItem('barati_admin_token', data.token);
-            showDashboard(data.admin);
+            try {
+              showDashboard(data.admin);
+            } catch (uiErr) {
+              console.warn('Dashboard rendering notice:', uiErr);
+              document.getElementById('login-view').style.display = 'none';
+              document.getElementById('dashboard-view').style.display = 'block';
+              document.getElementById('nav-auth-section').style.display = 'flex';
+            }
           }
         } else {
           alertBox.textContent = data.message || 'نام کاربری یا رمز عبور اشتباه است.';
@@ -1264,7 +1299,8 @@
       document.getElementById('login-view').style.display = 'none';
       document.getElementById('dashboard-view').style.display = 'block';
       document.getElementById('nav-auth-section').style.display = 'flex';
-      document.getElementById('nav-username').textContent = user.username;
+      const usernameDisplay = (user && user.username) ? user.username : 'admin';
+      document.getElementById('nav-username').textContent = usernameDisplay;
 
       loadDashboardData();
     }

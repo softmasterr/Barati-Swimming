@@ -120,10 +120,19 @@ export function createApp() {
   // 5. Global API Rate Limiter
   app.use(globalRateLimiter);
 
-  // 6. Static Assets
+  // 6. Static Assets with Cache-Control headers to prevent stale UI caching
   const publicDir = path.resolve(process.cwd(), 'public');
-  app.use(express.static(publicDir));
+  app.use(express.static(publicDir, {
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  }));
   app.get(['/', '/admin'], (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(path.join(publicDir, 'index.html'));
   });
 
