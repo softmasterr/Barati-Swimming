@@ -126,7 +126,7 @@ class _PoolSelectionDialogState extends State<PoolSelectionDialog> {
                           pool,
                           style: TextStyle(
                             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            color: isSelected ? const Color(0xFF0284C7) : Colors.black89,
+                            color: isSelected ? const Color(0xFF0284C7) : Colors.black87,
                             fontSize: 13,
                           ),
                         ),
