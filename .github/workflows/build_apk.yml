@@ -61,6 +61,13 @@ jobs:
           path: ${{ env.APK_PATH }}
           if-no-files-found: error
 
+      - name: Clean Up Legacy Release Assets
+        run: |
+          gh release delete-asset "v${{ env.APP_VERSION }}-release" "app-release.apk" --yes || true
+          gh release delete-asset "v${{ env.APP_VERSION }}-release" "barati-swimming-release.apk" --yes || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Publish Official GitHub Release
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
