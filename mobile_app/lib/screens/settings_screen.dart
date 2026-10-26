@@ -6,6 +6,7 @@ import '../models/app_settings.dart';
 import '../models/definition_item.dart';
 import '../services/sms_service.dart';
 import '../widgets/changelog_dialog.dart';
+import '../widgets/pool_selection_dialog.dart';
 import 'onboarding_screen.dart';
 import 'login_screen.dart';
 
@@ -59,9 +60,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _smsApiKeyCtrl = TextEditingController(text: settings.smsApiKey);
     _smsSenderLineCtrl = TextEditingController(text: settings.smsSenderLine);
 
-    _smsEntryCtrl = TextEditingController(text: settings.smsEntryTemplate);
+    String entryTpl = settings.smsEntryTemplate;
+    if (!entryTpl.contains('{pool}')) {
+      if (entryTpl.contains('وارد استخر شد')) {
+        entryTpl = entryTpl.replaceAll('وارد استخر شد', 'وارد {pool} شد');
+      } else {
+        entryTpl = '$entryTpl (استخر: {pool})';
+      }
+    }
+    _smsEntryCtrl = TextEditingController(text: entryTpl);
     _smsLowBalanceCtrl = TextEditingController(text: settings.smsLowBalanceTemplate);
     _smsRechargeCtrl = TextEditingController(text: settings.smsRechargeTemplate);
+
+    _smsEntryCtrl.addListener(() {
+      if (mounted) setState(() {});
+    });
+    _smsLowBalanceCtrl.addListener(() {
+      if (mounted) setState(() {});
+    });
+    _smsRechargeCtrl.addListener(() {
+      if (mounted) setState(() {});
+    });
 
     _graceSessionsCtrl = TextEditingController(text: settings.graceSessionsLimit.toString());
     _lowSessionsCtrl = TextEditingController(text: settings.lowSessionsThreshold.toString());
@@ -241,6 +260,139 @@ class _SettingsScreenState extends State<SettingsScreen> {
       SnackBar(
         content: Text(res.message),
         backgroundColor: res.success ? Colors.green : Colors.orange[800],
+      ),
+    );
+  }
+
+  void _insertVariable(TextEditingController ctrl, String tag) {
+    final text = ctrl.text;
+    final selection = ctrl.selection;
+    if (selection.start >= 0 && selection.end >= 0) {
+      final newText = text.replaceRange(selection.start, selection.end, tag);
+      ctrl.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: selection.start + tag.length),
+      );
+    } else {
+      ctrl.text = '$text $tag';
+      ctrl.selection = TextSelection.collapsed(offset: ctrl.text.length);
+    }
+    setState(() {});
+  }
+
+  void _resetSmsTemplatesToDefault() {
+    setState(() {
+      _smsEntryCtrl.text = 'فرزند شما {name} ساعت {time} وارد {pool} شد. مانده جلسات: {sessions}';
+      _smsLowBalanceCtrl.text = 'اولیاء گرامی، تنها {sessions} جلسه از اعتبار دوره فرزند شما {name} در {pool} باقی مانده است. لطفاً نسبت به تمدید اقدام فرمایید.';
+      _smsRechargeCtrl.text = 'دوره فرزند شما {name} در {pool} با موفقیت تمدید شد. پکیج: {package} • مانده جلسات: {sessions}';
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('قالب‌های پیامک به حالت استاندارد با نام استخر بازنشانی شدند. دکمه ذخیره تنظیمات را لمس فرمایید.'),
+        backgroundColor: Color(0xFF0D9488),
+      ),
+    );
+  }
+
+  String _generateLivePreview({
+    required String template,
+    required String poolName,
+    required String academyName,
+  }) {
+    if (template.trim().isEmpty) return '(متن پیامک خالی است)';
+    final effectivePool = poolName.isNotEmpty ? poolName : 'استخر مرکزی براتی';
+    final effectiveAcademy = academyName.isNotEmpty ? academyName : 'آکادمی شنای براتی';
+    return template
+        .replaceAll('{name}', 'علی رضایی')
+        .replaceAll('{time}', '۱۸:۳۰')
+        .replaceAll('{pool}', effectivePool)
+        .replaceAll('{sessions}', '۱۰')
+        .replaceAll('{package}', 'آموزش مقدماتی شنا')
+        .replaceAll('{academy}', effectiveAcademy)
+        .replaceAll('{debt}', '۰');
+  }
+
+  Widget _buildVariableChips(TextEditingController ctrl, List<Map<String, String>> tags) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: tags.map((t) {
+        final isPool = t['tag'] == '{pool}';
+        return ActionChip(
+          visualDensity: VisualDensity.compact,
+          backgroundColor: isPool ? const Color(0xFFCCFBF1) : const Color(0xFFF1F5F9),
+          side: BorderSide(
+            color: isPool ? const Color(0xFF0D9488) : const Color(0xFFCBD5E1),
+            width: isPool ? 1.4 : 0.8,
+          ),
+          avatar: Icon(
+            isPool ? Icons.pool_rounded : Icons.add_circle_outline_rounded,
+            size: 15,
+            color: isPool ? const Color(0xFF0F766E) : const Color(0xFF475569),
+          ),
+          label: Text(
+            t['label']!,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: isPool ? FontWeight.bold : FontWeight.w500,
+              color: isPool ? const Color(0xFF0F766E) : const Color(0xFF334155),
+            ),
+          ),
+          onPressed: () => _insertVariable(ctrl, t['tag']!),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildLivePreviewBox({
+    required String title,
+    required String content,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8, bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.remove_red_eye_outlined, size: 14, color: Color(0xFF64748B)),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFCBD5E1)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.sms_outlined, size: 16, color: Color(0xFF0D9488)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    content,
+                    style: const TextStyle(fontSize: 12, height: 1.5, color: Color(0xFF1E293B)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -979,7 +1131,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             const SizedBox(height: 16),
 
-            // SMS Templates Configuration (Requirements 2 & 6)
+            // SMS Templates Configuration (Requirements 2 & 6 + Multi-Pool SMS support)
             Card(
               elevation: 2,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -988,55 +1140,202 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.edit_note_rounded, color: Color(0xFF0D9488)),
-                        SizedBox(width: 8),
+                        const Icon(Icons.edit_note_rounded, color: Color(0xFF0D9488)),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'شخصی‌سازی متن پیامک‌ها (قالب‌های ارسالی)',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ),
+                        TextButton.icon(
+                          style: TextButton.styleFrom(
+                            foregroundColor: const Color(0xFF0D9488),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          icon: const Icon(Icons.restore_rounded, size: 16),
+                          label: const Text('بازنشانی به پیش‌فرض', style: TextStyle(fontSize: 11)),
+                          onPressed: _resetSmsTemplatesToDefault,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'متن پیامک‌های ارسالی به والدین شناگران را می‌توانید در این بخش شخصی‌سازی کنید. نام استخر با متغیر {pool} به صورت هوشمند جایگزین خواهد شد.',
+                      style: TextStyle(color: Colors.grey, fontSize: 11, height: 1.5),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Active Pool for SMS Banner
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0FDFA),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF99F6E4)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFCCFBF1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.pool_rounded, color: Color(0xFF0D9488), size: 20),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'استخر فعال جهت درج در متغیر {pool}:',
+                                  style: TextStyle(fontSize: 11, color: Color(0xFF0F766E)),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  provider.activePoolName,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF134E4A)),
+                                ),
+                              ],
+                            ),
+                          ),
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF0D9488),
+                              side: const BorderSide(color: Color(0xFF0D9488)),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            icon: const Icon(Icons.sync_alt_rounded, size: 16),
+                            label: const Text('تغییر استخر', style: TextStyle(fontSize: 11)),
+                            onPressed: () => PoolSelectionDialog.show(context),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 1. Entry SMS Template
+                    Row(
+                      children: const [
+                        Icon(Icons.directions_run_rounded, size: 16, color: Color(0xFF0D9488)),
+                        SizedBox(width: 6),
                         Text(
-                          'شخصی‌سازی متن پیامک‌ها (قالب‌های ارسالی)',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          '۱. قالب پیامک ثبت تردد و ورود شناگر:',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                         ),
                       ],
                     ),
                     const SizedBox(height: 6),
-                    const Text(
-                      'متغیرهای قابل استفاده در متن: {name} (نام شناگر) ، {time} (ساعت) ، {sessions} (مانده جلسات) ، {pool} (نام استخر تردد) ، {academy} (نام آکادمی) ، {package} (پکیج دوره)',
-                      style: TextStyle(color: Color(0xFF0D9488), fontSize: 11, fontWeight: FontWeight.bold, height: 1.5),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Entry SMS Template
                     TextField(
                       controller: _smsEntryCtrl,
                       maxLines: 2,
                       decoration: InputDecoration(
-                        labelText: 'قالب پیامک ثبت تردد و ورود شناگر',
+                        hintText: 'فرزند شما {name} ساعت {time} وارد {pool} شد. مانده جلسات: {sessions}',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 6),
+                    const Text('درج سریع متغیر در متن:', style: TextStyle(color: Colors.grey, fontSize: 10)),
+                    const SizedBox(height: 4),
+                    _buildVariableChips(_smsEntryCtrl, [
+                      {'tag': '{pool}', 'label': 'نام استخر {pool}'},
+                      {'tag': '{name}', 'label': 'نام شناگر {name}'},
+                      {'tag': '{time}', 'label': 'ساعت {time}'},
+                      {'tag': '{sessions}', 'label': 'مانده جلسات {sessions}'},
+                      {'tag': '{academy}', 'label': 'آکادمی {academy}'},
+                      {'tag': '{debt}', 'label': 'بدهی {debt}'},
+                    ]),
+                    _buildLivePreviewBox(
+                      title: 'پیش‌نمایش زنده پیامک ورودی ارسالی به والدین:',
+                      content: _generateLivePreview(
+                        template: _smsEntryCtrl.text,
+                        poolName: provider.activePoolName,
+                        academyName: _academyNameCtrl.text,
+                      ),
+                    ),
 
-                    // Low Balance SMS Template (Requirement 6)
+                    // 2. Low Balance SMS Template (Requirement 6)
+                    Row(
+                      children: const [
+                        Icon(Icons.notifications_active_rounded, size: 16, color: Color(0xFFF59E0B)),
+                        SizedBox(width: 6),
+                        Text(
+                          '۲. قالب پیامک هشدار کسر موجودی و یادآوری تمدید:',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
                     TextField(
                       controller: _smsLowBalanceCtrl,
                       maxLines: 2,
                       decoration: InputDecoration(
-                        labelText: 'قالب پیامک هشدار کسر موجودی و یادآوری تمدید',
+                        hintText: 'اولیاء گرامی، تنها {sessions} جلسه از اعتبار دوره فرزند شما {name} در {pool} باقی مانده است...',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 6),
+                    const Text('درج سریع متغیر در متن:', style: TextStyle(color: Colors.grey, fontSize: 10)),
+                    const SizedBox(height: 4),
+                    _buildVariableChips(_smsLowBalanceCtrl, [
+                      {'tag': '{pool}', 'label': 'نام استخر {pool}'},
+                      {'tag': '{name}', 'label': 'نام شناگر {name}'},
+                      {'tag': '{sessions}', 'label': 'مانده جلسات {sessions}'},
+                      {'tag': '{academy}', 'label': 'آکادمی {academy}'},
+                    ]),
+                    _buildLivePreviewBox(
+                      title: 'پیش‌نمایش زنده پیامک یادآوری تمدید:',
+                      content: _generateLivePreview(
+                        template: _smsLowBalanceCtrl.text,
+                        poolName: provider.activePoolName,
+                        academyName: _academyNameCtrl.text,
+                      ),
+                    ),
 
-                    // Recharge SMS Template (Requirement 1)
+                    // 3. Recharge SMS Template (Requirement 1)
+                    Row(
+                      children: const [
+                        Icon(Icons.add_shopping_cart_rounded, size: 16, color: Color(0xFF10B981)),
+                        SizedBox(width: 6),
+                        Text(
+                          '۳. قالب پیامک شارژ و تمدید دوره آموزشی:',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
                     TextField(
                       controller: _smsRechargeCtrl,
                       maxLines: 2,
                       decoration: InputDecoration(
-                        labelText: 'قالب پیامک شارژ و تمدید دوره',
+                        hintText: 'دوره فرزند شما {name} در {pool} با موفقیت تمدید شد. پکیج: {package} • مانده جلسات: {sessions}',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text('درج سریع متغیر در متن:', style: TextStyle(color: Colors.grey, fontSize: 10)),
+                    const SizedBox(height: 4),
+                    _buildVariableChips(_smsRechargeCtrl, [
+                      {'tag': '{pool}', 'label': 'نام استخر {pool}'},
+                      {'tag': '{name}', 'label': 'نام شناگر {name}'},
+                      {'tag': '{package}', 'label': 'نام دوره {package}'},
+                      {'tag': '{sessions}', 'label': 'مانده جلسات {sessions}'},
+                      {'tag': '{academy}', 'label': 'آکادمی {academy}'},
+                    ]),
+                    _buildLivePreviewBox(
+                      title: 'پیش‌نمایش زنده پیامک شارژ دوره:',
+                      content: _generateLivePreview(
+                        template: _smsRechargeCtrl.text,
+                        poolName: provider.activePoolName,
+                        academyName: _academyNameCtrl.text,
                       ),
                     ),
                   ],

@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 class ChangelogDialog extends StatelessWidget {
   final String version;
 
-  const ChangelogDialog({super.key, this.version = '1.2.0'});
+  const ChangelogDialog({super.key, this.version = '1.2.1'});
 
-  static void show(BuildContext context, {String version = '1.2.0'}) {
+  static void show(BuildContext context, {String version = '1.2.1'}) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -16,6 +16,18 @@ class ChangelogDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final changes = [
+      {
+        'icon': Icons.sms_rounded,
+        'color': const Color(0xFF0D9488),
+        'title': 'تنظیمات نام استخر در پیامک‌ها و پیش‌نمایش زنده',
+        'desc': 'نمایش نام استخر فعال در تنظیمات پیامک، دکمه‌های سریع درج متغیر {pool} و پیش‌نمایش زنده متن پیامک ارسالی به والدین.',
+      },
+      {
+        'icon': Icons.auto_fix_high_rounded,
+        'color': const Color(0xFF0284C7),
+        'title': 'ارتقای خودکار قالب‌های پیامک قدیمی',
+        'desc': 'جایگزینی خودکار «وارد استخر شد» با «وارد {pool} شد» در تنظیمات بدون نیاز به پاک‌کردن یا تنظیم دستی مجدد.',
+      },
       {
         'icon': Icons.location_city_rounded,
         'color': const Color(0xFF0284C7),

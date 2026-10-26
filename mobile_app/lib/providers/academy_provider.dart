@@ -131,6 +131,17 @@ class AcademyProvider with ChangeNotifier {
     final savedActivePool = prefs.getString('active_pool_name') ?? loadedPools.first;
     _activePoolName = savedActivePool;
 
+    String entryTpl = prefs.getString('sms_entry_template') ??
+        'فرزند شما {name} ساعت {time} وارد {pool} شد. مانده جلسات: {sessions}';
+    if (!entryTpl.contains('{pool}')) {
+      if (entryTpl.contains('وارد استخر شد')) {
+        entryTpl = entryTpl.replaceAll('وارد استخر شد', 'وارد {pool} شد');
+      } else {
+        entryTpl = '$entryTpl (استخر: {pool})';
+      }
+      prefs.setString('sms_entry_template', entryTpl);
+    }
+
     _settings = AppSettings(
       academyName: prefs.getString('academy_name') ?? 'آکادمی شنای براتی',
       schoolId: prefs.getString('school_id') ?? 'barati-pool',
@@ -145,18 +156,17 @@ class AcademyProvider with ChangeNotifier {
       smsProvider: prefs.getString('sms_provider') ?? 'directSim',
       smsApiKey: prefs.getString('sms_api_key') ?? '',
       smsSenderLine: prefs.getString('sms_sender_line') ?? '10008585',
-      smsEntryTemplate: prefs.getString('sms_entry_template') ??
-          'فرزند شما {name} ساعت {time} وارد {pool} شد. مانده جلسات: {sessions}',
+      smsEntryTemplate: entryTpl,
       smsLowBalanceTemplate: prefs.getString('sms_low_balance_template') ??
-          'اولیاء گرامی، تنها {sessions} جلسه از اعتبار دوره فرزند شما {name} در {academy} باقی مانده است. لطفاً نسبت به تمدید اقدام فرمایید.',
+          'اولیاء گرامی، تنها {sessions} جلسه از اعتبار دوره فرزند شما {name} در {pool} باقی مانده است. لطفاً نسبت به تمدید اقدام فرمایید.',
       smsRechargeTemplate: prefs.getString('sms_recharge_template') ??
-          'دوره فرزند شما {name} در {academy} با موفقیت تمدید شد. پکیج: {package} • مانده جلسات جدید: {sessions}',
+          'دوره فرزند شما {name} در {pool} با موفقیت تمدید شد. پکیج: {package} • مانده جلسات: {sessions}',
       graceSessionsLimit: prefs.getInt('grace_sessions_limit') ?? 1,
       lowSessionsThreshold: prefs.getInt('low_sessions_threshold') ?? 2,
       cooldownMinutes: prefs.getInt('cooldown_minutes') ?? 60,
       isDemoMode: prefs.getBool('is_demo_mode') ?? true,
       isOnboardingCompleted: prefs.getBool('onboarding_completed') ?? false,
-      appVersion: '1.2.0',
+      appVersion: '1.2.1',
       lastSeenVersion: prefs.getString('last_seen_version') ?? '',
     );
     notifyListeners();
@@ -642,6 +652,7 @@ class AcademyProvider with ChangeNotifier {
         .replaceAll('{name}', athlete.name)
         .replaceAll('{package}', packageName)
         .replaceAll('{sessions}', athlete.remainingSessions.toString())
+        .replaceAll('{pool}', _activePoolName)
         .replaceAll('{academy}', _settings.academyName);
 
     if (debt > 0) {
