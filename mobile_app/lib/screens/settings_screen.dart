@@ -617,8 +617,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         const Icon(Icons.location_on_rounded, color: Color(0xFF0284C7)),
                         const SizedBox(width: 8),
-                        const Expanded(
-                          child: Text(
+                        Expanded(
+                          child: const Text(
                             'مدیریت شعب و استخرهای همکار',
                             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                           ),
@@ -710,8 +710,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         const Icon(Icons.verified_rounded, color: Color(0xFF10B981)),
                         const SizedBox(width: 8),
-                        const Expanded(
-                          child: Text(
+                        Expanded(
+                          child: const Text(
                             'لایسنس و اشتراک مدرسه شنا (سایر استخرها)',
                             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                           ),
@@ -789,8 +789,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         const Icon(Icons.workspace_premium_rounded, color: Color(0xFF0284C7)),
                         const SizedBox(width: 8),
-                        const Expanded(
-                          child: Text(
+                        Expanded(
+                          child: const Text(
                             'مدیریت دوره‌ها و پکیج‌های آموزشی',
                             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                           ),
@@ -1154,10 +1154,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           child: const Icon(Icons.science_rounded, color: Colors.orange, size: 24),
                         ),
                         const SizedBox(width: 12),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
+                            children: const [
                               Text(
                                 'حالت تستی و آزمایشی (آموزش کاربر)',
                                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),

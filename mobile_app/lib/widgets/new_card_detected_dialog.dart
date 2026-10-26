@@ -225,8 +225,8 @@ class NewCardDetectedDialog extends StatelessWidget {
               child: const Icon(Icons.nfc_rounded, color: Color(0xFF0284C7), size: 26),
             ),
             const SizedBox(width: 10),
-            const Expanded(
-              child: Text(
+            Expanded(
+              child: const Text(
                 'شناسایی کارت/مچ‌بند جدید',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),

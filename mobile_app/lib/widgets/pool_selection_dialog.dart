@@ -74,10 +74,10 @@ class _PoolSelectionDialogState extends State<PoolSelectionDialog> {
                 child: const Icon(Icons.pool_rounded, color: Color(0xFF0284C7), size: 24),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                  children: const [
                     Text(
                       'انتخاب استخر فعال',
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),

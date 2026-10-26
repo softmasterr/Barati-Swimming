@@ -51,8 +51,8 @@ class DuplicateScanDialog extends StatelessWidget {
               child: const Icon(Icons.timer_rounded, color: Colors.orange, size: 26),
             ),
             const SizedBox(width: 10),
-            const Expanded(
-              child: Text(
+            Expanded(
+              child: const Text(
                 'تردد مکرر در کمتر از ۱ ساعت',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
