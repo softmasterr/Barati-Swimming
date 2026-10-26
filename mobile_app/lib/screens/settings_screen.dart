@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import 'package:provider/provider.dart';
 import '../providers/academy_provider.dart';
 import '../models/app_settings.dart';
+import '../models/definition_item.dart';
 import '../services/sms_service.dart';
 import '../widgets/changelog_dialog.dart';
 import 'onboarding_screen.dart';
@@ -273,6 +275,181 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _showAddOrEditPackageDialog(BuildContext context, [DefinitionItem? item]) {
+    final isEditing = item != null;
+    final titleCtrl = TextEditingController(text: isEditing ? item.title : '');
+    final sessionsCtrl = TextEditingController(text: isEditing ? (item.sessions?.toString() ?? '12') : '12');
+    final priceCtrl = TextEditingController(text: isEditing ? (item.price?.toString() ?? '2800000') : '2800000');
+    final codeCtrl = TextEditingController(text: isEditing ? item.code : '');
+    final descCtrl = TextEditingController(text: isEditing ? (item.description ?? '') : '');
+    final provider = context.read<AcademyProvider>();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          title: Row(
+            children: [
+              Icon(
+                isEditing ? Icons.edit_note_rounded : Icons.add_circle_outline_rounded,
+                color: const Color(0xFF0284C7),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                isEditing ? 'ویرایش مشخصات دوره آموزشی' : 'تعریف پکیج / دوره جدید',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'عنوان دوره آموزشی *',
+                    hintText: 'مثلاً: دوره مقدماتی شنا (۱۲ جلسه)',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: sessionsCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'تعداد جلسات *',
+                          hintText: '۱۲',
+                          suffixText: 'جلسه',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: priceCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'شهریه دوره (تومان) *',
+                          hintText: '۲,۸۰۰,۰۰۰',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: codeCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'کد شناسایی دوره (اختیاری)',
+                    hintText: 'مثلاً: PKG-BEG',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descCtrl,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    labelText: 'توضیحات یا شرایط دوره (اختیاری)',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('انصراف'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0284C7),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () {
+                final title = titleCtrl.text.trim();
+                if (title.isEmpty) return;
+
+                final sessions = int.tryParse(sessionsCtrl.text.trim()) ?? 12;
+                final price = int.tryParse(priceCtrl.text.trim()) ?? 0;
+                final code = codeCtrl.text.trim().isNotEmpty
+                    ? codeCtrl.text.trim()
+                    : 'PKG-${DateTime.now().millisecondsSinceEpoch % 1000}';
+                final desc = descCtrl.text.trim();
+
+                if (isEditing) {
+                  final updated = DefinitionItem(
+                    id: item.id,
+                    type: 'course_type',
+                    title: title,
+                    code: code,
+                    description: desc,
+                    sessions: sessions,
+                    price: price,
+                  );
+                  provider.updateDefinition(updated);
+                } else {
+                  final newDef = DefinitionItem(
+                    id: 'pkg_${DateTime.now().millisecondsSinceEpoch}',
+                    type: 'course_type',
+                    title: title,
+                    code: code,
+                    description: desc,
+                    sessions: sessions,
+                    price: price,
+                  );
+                  provider.addDefinition(newDef);
+                }
+                Navigator.pop(ctx);
+              },
+              child: Text(isEditing ? 'ذخیره تغییرات' : 'افزودن دوره'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeletePackage(BuildContext context, DefinitionItem item) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('حذف دوره آموزشی', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          content: Text('آیا از حذف دوره «${item.title}» اطمینان دارید؟'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('انصراف')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red[700], foregroundColor: Colors.white),
+              onPressed: () {
+                context.read<AcademyProvider>().deleteDefinition(item.id);
+                Navigator.pop(ctx);
+              },
+              child: const Text('حذف'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AcademyProvider>();
@@ -459,6 +636,126 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const Text(
                       'سایر مدارس و باشگاه‌های شنا می‌توانند با وارد کردن کد لایسنس و شناسه مدرسه خود، از این نرم‌افزار با برند، لوگو و دیتابیس اختصاصی خود بهره‌برداری کنند.',
                       style: TextStyle(color: Colors.grey, fontSize: 11, height: 1.5),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Course & Packages Management Card (User Requirement: Edit course specs in Settings)
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.workspace_premium_rounded, color: Color(0xFF0284C7)),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'مدیریت دوره‌ها و پکیج‌های آموزشی',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.add_circle_outline_rounded, color: Color(0xFF0284C7)),
+                          tooltip: 'تعریف دوره جدید',
+                          onPressed: () => _showAddOrEditPackageDialog(context),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'مشخصات، شهریه و تعداد جلسات دوره‌های آموزشی جهت ثبت‌نام و شارژ شناگران:',
+                      style: TextStyle(color: Colors.grey, fontSize: 11),
+                    ),
+                    const SizedBox(height: 12),
+                    Builder(
+                      builder: (ctx) {
+                        final packages = provider.getDefinitionsByType('course_type');
+                        final currency = NumberFormat('#,###', 'fa');
+
+                        if (packages.isEmpty) {
+                          return Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[50],
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.grey[200]!),
+                            ),
+                            child: Center(
+                              child: Text('هیچ دوره‌ای تعریف نشده است.', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                            ),
+                          );
+                        }
+
+                        return Column(
+                          children: packages.map((pkg) {
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[50],
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.grey[200]!),
+                              ),
+                              child: Row(
+                                children: [
+                                  const CircleAvatar(
+                                    radius: 18,
+                                    backgroundColor: Color(0xFFE0F2FE),
+                                    child: Icon(Icons.pool_rounded, color: Color(0xFF0284C7), size: 18),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(pkg.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '${pkg.sessions ?? 0} جلسه • شهریه: ${currency.format(pkg.price ?? 0)} تومان${pkg.code.isNotEmpty ? " • کد: ${pkg.code}" : ""}',
+                                          style: TextStyle(color: Colors.grey[600], fontSize: 11),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.edit_outlined, color: Color(0xFF0284C7), size: 20),
+                                    tooltip: 'ویرایش مشخصات دوره',
+                                    onPressed: () => _showAddOrEditPackageDialog(context, pkg),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                                    tooltip: 'حذف دوره',
+                                    onPressed: () => _confirmDeletePackage(context, pkg),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF0284C7),
+                          side: const BorderSide(color: Color(0xFF0284C7)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('افزودن دوره / پکیج آموزشی جدید'),
+                        onPressed: () => _showAddOrEditPackageDialog(context),
+                      ),
                     ),
                   ],
                 ),

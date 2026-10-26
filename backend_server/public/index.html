@@ -513,8 +513,8 @@
           <label>کلمه عبور امن</label>
           <input type="password" id="login-password" class="form-control" required value="Admin@Barati2026!" placeholder="••••••••" autocomplete="current-password">
         </div>
-        <button type="submit" id="btn-login-submit" class="btn-primary" style="width: 100%; margin-top: 0.5rem;">
-          مرحله بعد: بررسی هویت
+        <button type="submit" id="btn-login-submit" class="btn-primary" style="width: 100%; margin-top: 0.5rem; font-size: 1rem; padding: 0.75rem;">
+          ورود به پنل مدیریت
         </button>
 
         <!-- Fast Access Actions -->
@@ -611,6 +611,7 @@
       <div class="tabs-nav">
         <button class="tab-btn active" onclick="switchTab('licenses')">مدیریت لایسنس مدارس شنا</button>
         <button class="tab-btn" onclick="switchTab('athletes')">شناگران و ورزشکاران همگام‌شده</button>
+        <button class="tab-btn" onclick="switchTab('coaches')">مربیان و اساتید شنا</button>
         <button class="tab-btn" onclick="switchTab('attendance')">سوابق تردد و ورود به استخر</button>
         <button class="tab-btn" onclick="switchTab('audit')">لاگ‌های امنیتی و ممیزی (Audit Trail)</button>
         <button class="tab-btn" onclick="switchTab('crypto')">مخزن رمزنگاری پایگاه‌داده (AES-256 Vault)</button>
@@ -700,6 +701,35 @@
               <tbody id="attendance-table-body">
                 <tr>
                   <td colspan="6" style="text-align: center; color: var(--text-muted);">در حال بارگذاری سوابق تردد...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Coaches & Instructors -->
+      <div id="tab-coaches" class="tab-content" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">مربیان و اساتید آکادمی شنا</div>
+            <button class="btn-outline" onclick="loadCoaches()">بروزرسانی لیست</button>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>نام مربی</th>
+                  <th>تخصص / سبک</th>
+                  <th>شماره تماس</th>
+                  <th>شناسه مدرسه</th>
+                  <th>مدل محاسبه دستمزد</th>
+                  <th>مبلغ واریزشده (تومان)</th>
+                </tr>
+              </thead>
+              <tbody id="coaches-table-body">
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--text-muted);">در حال بارگذاری لیست مربیان...</td>
                 </tr>
               </tbody>
             </table>
@@ -868,12 +898,12 @@
         const res = await fetch('/api/admin/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
+          body: JSON.stringify({ username, password, directLogin: true })
         });
         const data = await res.json();
 
         submitBtn.disabled = false;
-        submitBtn.textContent = 'مرحله بعد: بررسی هویت';
+        submitBtn.textContent = 'ورود به پنل مدیریت';
 
         if (res.ok) {
           currentTempToken = data.tempToken;
@@ -895,7 +925,7 @@
         }
       } catch (err) {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'مرحله بعد: بررسی هویت';
+        submitBtn.textContent = 'ورود به پنل مدیریت';
         alertBox.textContent = 'خطای ارتباط با سرور. لطفاً از روشن بودن سرور داکر اطمینان حاصل فرمایید.';
         alertBox.style.display = 'block';
       }
@@ -1189,6 +1219,26 @@
         </tr>
       `;
 
+      // Populate demo coaches
+      document.getElementById('coaches-table-body').innerHTML = `
+        <tr>
+          <td><strong>استاد علی براتی</strong></td>
+          <td>کرال سینه، پروانه و نجات‌غریق</td>
+          <td>۰۹۱۲۱۱۱۱۱۱۱</td>
+          <td><code>barati-main-pool</code></td>
+          <td>درصدی (۳۵%)</td>
+          <td>۲,۲۴۰,۰۰۰ تومان</td>
+        </tr>
+        <tr>
+          <td><strong>مربی محمد کریمی</strong></td>
+          <td>آموزش مبتدی و اصلاح تکنیک</td>
+          <td>۰۹۱۲۲۲۲۲۲۲۲</td>
+          <td><code>barati-main-pool</code></td>
+          <td>جلسه‌ای (۱۵۰,۰۰۰ ت)</td>
+          <td>۱,۲۰۰,۰۰۰ تومان</td>
+        </tr>
+      `;
+
       // Populate demo audit logs
       document.getElementById('audit-table-body').innerHTML = `
         <tr>
@@ -1233,6 +1283,7 @@
       loadStats();
       loadLicenses();
       loadAthletes();
+      loadCoaches();
       loadAttendance();
       loadAuditLogs();
     }
@@ -1364,6 +1415,40 @@
         }).join('');
       } catch {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--danger);">خطا در دریافت سوابق تردد</td></tr>';
+      }
+    }
+
+    async function loadCoaches() {
+      const tbody = document.getElementById('coaches-table-body');
+      if (!tbody) return;
+      if (currentSessionToken === 'demo_preview_token') return;
+      try {
+        const res = await fetch('/api/admin/coaches', {
+          headers: { 'Authorization': `Bearer ${currentSessionToken}` }
+        });
+        if (!res.ok) return;
+        const { coaches } = await res.json();
+        if (!coaches || coaches.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">هنوز هیچ مربی از تبلت‌ها به سرور ابری همگام‌سازی نشده است.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = coaches.map(c => {
+          let modelStr = c.modelType === 'percentage'
+            ? `درصدی (${c.modelVal}%)`
+            : (c.modelType === 'per_session' ? `جلسه‌ای (${Number(c.modelVal).toLocaleString('fa-IR')} ت)` : `حقوق ثابت (${Number(c.modelVal).toLocaleString('fa-IR')} ت)`);
+          return `
+            <tr>
+              <td><strong>${escapeHtml(c.name || '-')}</strong></td>
+              <td>${escapeHtml(c.specialty || '-')}</td>
+              <td>${escapeHtml(c.phone || '-')}</td>
+              <td><code>${escapeHtml(c.schoolId || '-')}</code></td>
+              <td>${modelStr}</td>
+              <td>${Number(c.settledAmount || 0).toLocaleString('fa-IR')} تومان</td>
+            </tr>
+          `;
+        }).join('');
+      } catch {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--danger);">خطا در دریافت لیست مربیان</td></tr>';
       }
     }
 

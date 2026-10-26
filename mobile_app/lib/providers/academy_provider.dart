@@ -712,6 +712,67 @@ class AcademyProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // --- Coach Management (Add, Update, Delete) ---
+  Future<void> addCoach({
+    required String name,
+    required String specialty,
+    required String modelType,
+    required int modelVal,
+    required String modelLabel,
+    required String phone,
+  }) async {
+    final newCoach = Coach(
+      id: 'c_${DateTime.now().millisecondsSinceEpoch}',
+      name: name,
+      specialty: specialty,
+      modelType: modelType,
+      modelVal: modelVal,
+      modelLabel: modelLabel,
+      phone: phone,
+      settledAmount: 0,
+    );
+    await _db.insertCoach(newCoach);
+    _coaches.add(newCoach);
+    FeedbackService.trigger(FeedbackType.success, 'مربی جدید با موفقیت ثبت شد');
+    notifyListeners();
+  }
+
+  Future<void> updateCoachDetails({
+    required String id,
+    required String name,
+    required String specialty,
+    required String modelType,
+    required int modelVal,
+    required String modelLabel,
+    required String phone,
+  }) async {
+    final idx = _coaches.indexWhere((c) => c.id == id);
+    if (idx != -1) {
+      final existing = _coaches[idx];
+      final updated = Coach(
+        id: id,
+        name: name,
+        specialty: specialty,
+        modelType: modelType,
+        modelVal: modelVal,
+        modelLabel: modelLabel,
+        phone: phone,
+        settledAmount: existing.settledAmount,
+      );
+      await _db.updateCoach(updated);
+      _coaches[idx] = updated;
+      FeedbackService.trigger(FeedbackType.success, 'مشخصات مربی با موفقیت ویرایش شد');
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteCoach(String coachId) async {
+    await _db.deleteCoach(coachId);
+    _coaches.removeWhere((c) => c.id == coachId);
+    FeedbackService.trigger(FeedbackType.info, 'مربی حذف گردید');
+    notifyListeners();
+  }
+
   // --- Server Connection Test ---
   Future<bool> testServerConnection({String? url, String? key}) async {
     final targetUrl = url ?? _settings.serverUrl;

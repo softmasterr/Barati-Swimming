@@ -407,9 +407,19 @@ class DatabaseHelper {
     return res.map((m) => Coach.fromMap(m)).toList();
   }
 
+  Future<int> insertCoach(Coach coach) async {
+    final db = await database;
+    return await db.insert('coaches', coach.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
   Future<int> updateCoach(Coach coach) async {
     final db = await database;
     return await db.update('coaches', coach.toMap(), where: 'id = ?', whereArgs: [coach.id]);
+  }
+
+  Future<int> deleteCoach(String id) async {
+    final db = await database;
+    return await db.delete('coaches', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<List<TransactionRecord>> getAllTransactions() async {

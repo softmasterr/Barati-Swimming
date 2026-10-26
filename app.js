@@ -904,9 +904,14 @@ function renderCoaches() {
             ${formatCurrency(payableBalance)} تومان
           </strong>
         </div>
-        <button class="btn-primary btn-sm" onclick="openSettleCoachModal('${coach.id}', '${coach.name}', ${payableBalance})">
-          تسویه‌حساب دستمزد
-        </button>
+        <div style="display: flex; gap: 0.4rem; align-items: center;">
+          <button class="btn-secondary btn-sm" onclick="openEditCoachModal('${coach.id}')" title="ویرایش مشخصات مربی">
+            ویرایش مشخصات
+          </button>
+          <button class="btn-primary btn-sm" onclick="openSettleCoachModal('${coach.id}', '${coach.name}', ${payableBalance})">
+            تسویه‌حساب دستمزد
+          </button>
+        </div>
       </div>
     `;
     container.appendChild(card);
@@ -1391,6 +1396,100 @@ function initDialogs() {
     });
   }
 
+  // 6B. Coach Add / Edit Listeners
+  const openNewCoachDialogBtn = document.getElementById('openNewCoachDialogBtn');
+  const coachModal = document.getElementById('coachModal');
+  const coachForm = document.getElementById('coachForm');
+
+  if (openNewCoachDialogBtn && coachModal) {
+    openNewCoachDialogBtn.addEventListener('click', () => {
+      document.getElementById('coachModalTitle').textContent = 'ثبت مربی جدید';
+      document.getElementById('coachSubmitBtn').textContent = 'ثبت مربی';
+      document.getElementById('coachEditId').value = '';
+      document.getElementById('coachName').value = '';
+      document.getElementById('coachSpecialty').value = '';
+      document.getElementById('coachPhone').value = '';
+      document.getElementById('coachModelType').value = 'percentage';
+      document.getElementById('coachModelVal').value = '35';
+      document.getElementById('coachModelValLabel').textContent = 'درصد مربی از شهریه (مثلاً ۳۵)';
+      coachModal.showModal();
+    });
+  }
+
+  const coachModelTypeSelect = document.getElementById('coachModelType');
+  if (coachModelTypeSelect) {
+    coachModelTypeSelect.addEventListener('change', () => {
+      const type = coachModelTypeSelect.value;
+      const label = document.getElementById('coachModelValLabel');
+      const valInput = document.getElementById('coachModelVal');
+      if (type === 'percentage') {
+        label.textContent = 'درصد مربی از شهریه (%)';
+        if (parseInt(valInput.value, 10) > 100) valInput.value = '35';
+      } else if (type === 'per_session') {
+        label.textContent = 'مبلغ هر سانس / جلسه (تومان)';
+        if (parseInt(valInput.value, 10) < 1000) valInput.value = '150000';
+      } else {
+        label.textContent = 'حقوق ثابت ماهانه (تومان)';
+        if (parseInt(valInput.value, 10) < 10000) valInput.value = '8000000';
+      }
+    });
+  }
+
+  if (coachForm) {
+    coachForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const editId = document.getElementById('coachEditId').value;
+      const name = document.getElementById('coachName').value.trim();
+      const specialty = document.getElementById('coachSpecialty').value.trim();
+      const phone = document.getElementById('coachPhone').value.trim();
+      const modelType = document.getElementById('coachModelType').value;
+      const modelVal = parseInt(document.getElementById('coachModelVal').value, 10) || 0;
+
+      let modelLabel = '';
+      if (modelType === 'percentage') {
+        modelLabel = `درصدی (${modelVal}%)`;
+      } else if (modelType === 'per_session') {
+        modelLabel = `جلسه‌ای (${formatCurrency(modelVal)} ت)`;
+      } else {
+        modelLabel = `حقوق ثابت (${formatCurrency(modelVal)} ت)`;
+      }
+
+      if (editId) {
+        // Edit existing coach
+        const coach = store.coaches.find(c => c.id === editId);
+        if (coach) {
+          coach.name = name;
+          coach.specialty = specialty;
+          coach.phone = phone;
+          coach.modelType = modelType;
+          coach.modelVal = modelVal;
+          coach.modelLabel = modelLabel;
+        }
+      } else {
+        // Add new coach
+        const newCoach = {
+          id: `c_${Date.now()}`,
+          name,
+          specialty,
+          phone,
+          modelType,
+          modelVal,
+          modelLabel,
+          settledAmount: 0
+        };
+        store.coaches.push(newCoach);
+      }
+
+      saveStore();
+      coachModal.close();
+      renderCoaches();
+      renderAthletesTable();
+      renderAccounting();
+      playSuccessChime();
+      alert(`مشخصات مربی «${name}» با موفقیت ذخیره شد.`);
+    });
+  }
+
   // 7. Offline Sync Queue Dialog & Network Toggle
   const openSyncQueueBtn = document.getElementById('openSyncQueueBtn');
   const syncQueueDialog = document.getElementById('syncQueueDialog');
@@ -1483,6 +1582,32 @@ window.openSettleCoachModal = function(coachId, coachName, payableBalance) {
   document.getElementById('settleCoachPayableDisplay').textContent = `${formatCurrency(payableBalance)} تومان`;
   document.getElementById('settleAmount').value = payableBalance > 0 ? payableBalance : 500000;
   document.getElementById('settleCoachDialog').showModal();
+};
+
+window.openEditCoachModal = function(coachId) {
+  const coach = store.coaches.find(c => c.id === coachId);
+  if (!coach) return;
+
+  const coachModal = document.getElementById('coachModal');
+  document.getElementById('coachModalTitle').textContent = 'ویرایش مشخصات مربی';
+  document.getElementById('coachSubmitBtn').textContent = 'ذخیره تغییرات';
+  document.getElementById('coachEditId').value = coach.id;
+  document.getElementById('coachName').value = coach.name;
+  document.getElementById('coachSpecialty').value = coach.specialty;
+  document.getElementById('coachPhone').value = coach.phone || '';
+  document.getElementById('coachModelType').value = coach.modelType || 'percentage';
+  document.getElementById('coachModelVal').value = coach.modelVal || 35;
+
+  const label = document.getElementById('coachModelValLabel');
+  if (coach.modelType === 'percentage') {
+    label.textContent = 'درصد مربی از شهریه (%)';
+  } else if (coach.modelType === 'per_session') {
+    label.textContent = 'مبلغ هر سانس / جلسه (تومان)';
+  } else {
+    label.textContent = 'حقوق ثابت ماهانه (تومان)';
+  }
+
+  coachModal.showModal();
 };
 
 function populatePaymentAthleteSelect() {

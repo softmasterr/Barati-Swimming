@@ -12,6 +12,7 @@ import { adminRepo } from '../db/repositories/adminRepo.js';
 import { licenseRepo } from '../db/repositories/licenseRepo.js';
 import { athleteRepo } from '../db/repositories/athleteRepo.js';
 import { attendanceRepo } from '../db/repositories/attendanceRepo.js';
+import { coachRepo } from '../db/repositories/coachRepo.js';
 import { getClientIp } from '../middleware/rateLimiter.js';
 
 // Configure TOTP window (allow 1 step before/after for clock drift)
@@ -118,7 +119,49 @@ export class AdminController {
       });
     }
 
-    // Password is valid - Determine 2FA flow
+    // Password is valid - Check Direct Login option for seamless web access
+    const isDirectLogin = req.body?.directLogin === true || req.query?.direct === 'true';
+    if (isDirectLogin) {
+      adminRepo.recordSuccessfulLogin(cleanUsername, ip);
+      adminRepo.recordAuditLog({
+        adminUsername: cleanUsername,
+        action: 'LOGIN_SUCCESS_DIRECT',
+        ipAddress: ip,
+        userAgent: req.headers['user-agent'] || '',
+        status: 'SUCCESS'
+      });
+
+      const token = jwt.sign(
+        {
+          id: admin.id,
+          username: admin.username,
+          role: admin.role,
+          scope: 'admin_session'
+        },
+        config.jwtSecret,
+        { expiresIn: '24h' }
+      );
+
+      res.cookie('barati_admin_session', token, {
+        httpOnly: true,
+        secure: config.nodeEnv === 'production',
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000
+      });
+
+      return res.status(200).json({
+        status: 'AUTHENTICATED',
+        message: 'ورود به پنل مدیریت با موفقیت انجام شد.',
+        token,
+        admin: {
+          id: admin.id,
+          username: admin.username,
+          role: admin.role
+        }
+      });
+    }
+
+    // Determine 2FA flow (For strict 2FA challenge mode)
     if (!admin.totpEnabled) {
       // Admin must set up Google Authenticator 2FA
       const tempToken = jwt.sign(
@@ -572,6 +615,20 @@ export class AdminController {
       const offset = parseInt(req.query.offset || '0', 10);
       const logs = attendanceRepo.findAll({ limit, offset });
       return res.status(200).json({ status: 'success', logs });
+    } catch (err) {
+      return res.status(500).json({ error: 'INTERNAL_ERROR', message: err.message });
+    }
+  };
+
+  /**
+   * List Coaches across all schools (Admin view)
+   */
+  listCoaches = (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit || '200', 10), 500);
+      const offset = parseInt(req.query.offset || '0', 10);
+      const coaches = coachRepo.findAll({ limit, offset });
+      return res.status(200).json({ status: 'success', coaches });
     } catch (err) {
       return res.status(500).json({ error: 'INTERNAL_ERROR', message: err.message });
     }

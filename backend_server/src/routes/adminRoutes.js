@@ -35,3 +35,4 @@ adminRouter.get('/api/admin/audit-logs', requireAdminAuth, adminController.getAu
 // 5. Cloud Synced Academy Data (Athletes & Attendance Overview)
 adminRouter.get('/api/admin/athletes', requireAdminAuth, adminController.listAthletes);
 adminRouter.get('/api/admin/attendance', requireAdminAuth, adminController.listAttendance);
+adminRouter.get('/api/admin/coaches', requireAdminAuth, adminController.listCoaches);

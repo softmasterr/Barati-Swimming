@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import 'package:provider/provider.dart';
 import '../providers/academy_provider.dart';
 import '../models/athlete.dart';
@@ -70,15 +71,16 @@ class NewCardDetectedDialog extends StatelessWidget {
   void _showNewAthleteRegistration(BuildContext context) {
     final provider = context.read<AcademyProvider>();
     final coaches = provider.coaches;
+    final packages = provider.getDefinitionsByType('course_type');
 
     final nameCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
     final initialPaidCtrl = TextEditingController();
 
     String selectedCoach = coaches.isNotEmpty ? coaches.first.id : '';
-    String selectedPkg = 'آموزش مقدماتی (۱۲ جلسه)';
-    int sessions = 12;
-    int price = 2800000;
+    String selectedPkg = packages.isNotEmpty ? packages.first.title : 'آموزش مقدماتی (۱۲ جلسه)';
+    int sessions = packages.isNotEmpty ? (packages.first.sessions ?? 12) : 12;
+    int price = packages.isNotEmpty ? (packages.first.price ?? 2800000) : 2800000;
 
     showDialog(
       context: context,
@@ -129,20 +131,37 @@ class NewCardDetectedDialog extends StatelessWidget {
                     DropdownButtonFormField<String>(
                       value: selectedPkg,
                       decoration: const InputDecoration(labelText: 'پکیج آموزشی', isDense: true),
-                      items: const [
-                        DropdownMenuItem(value: 'آموزش مقدماتی (۱۲ جلسه)', child: Text('آموزش مقدماتی (۱۲ جلسه - ۲,۸۰۰,۰۰۰ ت)')),
-                        DropdownMenuItem(value: 'آموزش پیشرفته (۱۲ جلسه)', child: Text('آموزش پیشرفته (۱۲ جلسه - ۳,۵۰۰,۰۰۰ ت)')),
-                        DropdownMenuItem(value: 'تیم مسابقات (۲۴ جلسه)', child: Text('تیم مسابقات (۲۴ جلسه - ۵,۸۰۰,۰۰۰ ت)')),
-                      ],
+                      items: packages.isNotEmpty
+                          ? packages.map((pkg) {
+                              final currency = NumberFormat('#,###', 'fa');
+                              return DropdownMenuItem(
+                                value: pkg.title,
+                                child: Text('${pkg.title} (${pkg.sessions ?? 0} جلسه - ${currency.format(pkg.price ?? 0)} ت)'),
+                              );
+                            }).toList()
+                          : const [
+                              DropdownMenuItem(value: 'آموزش مقدماتی (۱۲ جلسه)', child: Text('آموزش مقدماتی (۱۲ جلسه - ۲,۸۰۰,۰۰۰ ت)')),
+                              DropdownMenuItem(value: 'آموزش پیشرفته (۱۲ جلسه)', child: Text('آموزش پیشرفته (۱۲ جلسه - ۳,۵۰۰,۰۰۰ ت)')),
+                              DropdownMenuItem(value: 'تیم مسابقات (۲۴ جلسه)', child: Text('تیم مسابقات (۲۴ جلسه - ۵,۸۰۰,۰۰۰ ت)')),
+                            ],
                       onChanged: (val) {
+                        if (val == null) return;
                         setDialogState(() {
-                          selectedPkg = val!;
-                          if (val.contains('پیشرفته')) {
-                            sessions = 12; price = 3500000;
-                          } else if (val.contains('مسابقات')) {
-                            sessions = 24; price = 5800000;
+                          selectedPkg = val;
+                          if (packages.isNotEmpty) {
+                            try {
+                              final found = packages.firstWhere((p) => p.title == val);
+                              sessions = found.sessions ?? 12;
+                              price = found.price ?? 0;
+                            } catch (_) {}
                           } else {
-                            sessions = 12; price = 2800000;
+                            if (val.contains('پیشرفته')) {
+                              sessions = 12; price = 3500000;
+                            } else if (val.contains('مسابقات')) {
+                              sessions = 24; price = 5800000;
+                            } else {
+                              sessions = 12; price = 2800000;
+                            }
                           }
                         });
                       },

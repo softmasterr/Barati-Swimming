@@ -697,6 +697,48 @@
     </div>
   </dialog>
 
+  <!-- 8. Modal: Add / Edit Coach (افزودن و ویرایش مربی) -->
+  <dialog id="coachModal" closedby="any" aria-labelledby="coachModalTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="coachModalTitle">ثبت مربی جدید</h3>
+        <button type="button" class="btn-close" onclick="document.getElementById('coachModal').close()">✕</button>
+      </div>
+      <form id="coachForm" class="modal-form">
+        <input type="hidden" id="coachEditId">
+        
+        <div class="field">
+          <label for="coachName">نام و نام خانوادگی مربی *</label>
+          <input type="text" id="coachName" required placeholder="مثلاً: استاد براتی">
+        </div>
+        <div class="field">
+          <label for="coachSpecialty">تخصص / سبک آموزش *</label>
+          <input type="text" id="coachSpecialty" required placeholder="مثلاً: کرال سینه، قورباغه، نجات‌غریق">
+        </div>
+        <div class="field">
+          <label for="coachPhone">شماره موبایل مربی</label>
+          <input type="tel" id="coachPhone" placeholder="۰۹۱۲۳۴۵۶۷۸۹">
+        </div>
+        <div class="field">
+          <label for="coachModelType">نوع قرارداد و محاسبه دستمزد *</label>
+          <select id="coachModelType" required>
+            <option value="percentage">درصدی از شهریه شاگردان (%)</option>
+            <option value="per_session">حق‌الزحمه به ازای هر سانس / جلسه (تومان)</option>
+            <option value="monthly_fixed">حقوق ثابت ماهانه (تومان)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="coachModelVal" id="coachModelValLabel">درصد مربی از شهریه (مثلاً ۳۵)</label>
+          <input type="number" id="coachModelVal" required value="35" min="1">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="document.getElementById('coachModal').close()">انصراف</button>
+          <button type="submit" class="btn-primary" id="coachSubmitBtn">ذخیره مربی</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
   <!-- 7. Modal: Offline Sync Queue (مدیریت صف آفلاین) -->
   <dialog id="syncQueueDialog" closedby="any" aria-labelledby="syncQueueTitle">
     <div class="modal-content">
