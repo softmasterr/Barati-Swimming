@@ -41,29 +41,38 @@ jobs:
         working-directory: ./mobile_app
         run: flutter build apk --release --build-number=${{ github.run_number }}
 
-      - name: Prepare APK Release Artifacts
+      - name: Prepare Single Versioned Release APK
         run: |
-          cp mobile_app/build/app/outputs/flutter-apk/app-release.apk mobile_app/build/app/outputs/flutter-apk/barati-swimming-release.apk
+          APP_VER=$(grep '^version:' mobile_app/pubspec.yaml | sed 's/version: //' | cut -d '+' -f 1 | tr -d '[:space:]')
+          if [ -z "$APP_VER" ]; then
+            APP_VER="1.1.0"
+          fi
+          echo "APP_VERSION=$APP_VER" >> $GITHUB_ENV
+          APK_NAME="barati-swimming-v${APP_VER}.apk"
+          echo "APK_NAME=$APK_NAME" >> $GITHUB_ENV
+          echo "APK_PATH=mobile_app/build/app/outputs/flutter-apk/$APK_NAME" >> $GITHUB_ENV
+          cp mobile_app/build/app/outputs/flutter-apk/app-release.apk "mobile_app/build/app/outputs/flutter-apk/$APK_NAME"
+          echo "Successfully prepared single release APK: $APK_NAME"
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Barati-Swimming-Android-APK
-          path: mobile_app/build/app/outputs/flutter-apk/barati-swimming-release.apk
+          name: Barati-Swimming-v${{ env.APP_VERSION }}
+          path: ${{ env.APK_PATH }}
           if-no-files-found: error
 
       - name: Publish Official GitHub Release
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
-          tag_name: v1.1.0-release
-          name: "نسخه رسمی v1.1.0 آکادمی شنای براتی (Android Release)"
+          tag_name: v${{ env.APP_VERSION }}-release
+          name: "نسخه رسمی v${{ env.APP_VERSION }} آکادمی شنای براتی (Android Release)"
           body: |
             ## 🏊‍♂️ نسخه رسمی اپلیکیشن آکادمی شنای براتی (Barati Swimming Academy)
 
             این نسخه مجهز به **امضای دیجیتال پایدار و ثابت (Release Keystore)** است؛ از این پس برای نصب بروزرسانی‌ها **هرگز نیازی به حذف نسخه قبلی نیست** و با نصب نسخه جدید روی نسخه قبلی، تمامی اطلاعات شناگران، تنظیمات و پایگاه‌داده محلی حفظ می‌شوند.
 
-            ### ✨ قابلیت‌ها و تغییرات نسخه ۱.۱.۰:
+            ### ✨ قابلیت‌ها و تغییرات نسخه ${{ env.APP_VERSION }}:
             - **بروزرسانی مستقیم بدون حذف:** امضای یکپارچه Release Keystore و ارتقای خودکار شناسه بیلد.
             - **مدیریت کامل مربیان:** افزودن، ویرایش مشخصات، شماره تماس، تعیین مدل قرارداد (درصدی، جلسه‌ای یا حقوق ثابت) و ثبت تسویه‌حساب مالی.
             - **مدیریت دوره‌ها و پکیج‌ها در تنظیمات:** امکان تغییر نام دوره‌ها، تعداد جلسات و مبالغ شهریه در بخش تنظیمات و اعمال خودکار آن در کارت جدید و ثبت‌نام.
@@ -74,10 +83,8 @@ jobs:
 
             ---
             ### 📥 دانلود و نصب مستقیم:
-            فایل **`barati-swimming-release.apk`** را از بخش **Assets** در زیر دانلود کرده و مستقیماً روی گوشی یا تبلت اندروید خود نصب فرمایید.
-          files: |
-            mobile_app/build/app/outputs/flutter-apk/barati-swimming-release.apk
-            mobile_app/build/app/outputs/flutter-apk/app-release.apk
+            فایل نصبی **`${{ env.APK_NAME }}`** را از بخش **Assets** در زیر دانلود کرده و مستقیماً روی گوشی یا تبلت اندروید خود نصب فرمایید.
+          files: ${{ env.APK_PATH }}
           draft: false
           prerelease: false
         env:
