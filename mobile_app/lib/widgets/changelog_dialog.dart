@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 class ChangelogDialog extends StatelessWidget {
   final String version;
 
-  const ChangelogDialog({super.key, this.version = '1.1.0'});
+  const ChangelogDialog({super.key, this.version = '1.2.0'});
 
-  static void show(BuildContext context, {String version = '1.1.0'}) {
+  static void show(BuildContext context, {String version = '1.2.0'}) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -16,6 +16,24 @@ class ChangelogDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final changes = [
+      {
+        'icon': Icons.location_city_rounded,
+        'color': const Color(0xFF0284C7),
+        'title': 'انتخاب استخر فعال در بدو ورود',
+        'desc': 'سوال هوشمند نام استخر هنگام ورود و قابلیت تغییر سریع در نوار بالا جهت ثبت دقیق تردد شناگران و مربیان به تفکیک استخر.',
+      },
+      {
+        'icon': Icons.receipt_long_rounded,
+        'color': const Color(0xFFEF4444),
+        'title': 'ثبت استخر در هزینه‌ها و دستمزد مربیان',
+        'desc': 'امکان مشخص کردن نام استخر مرتبط در هنگام ثبت هزینه‌ها یا تسویه‌حساب با مربیانی که با چندین استخر همکاری دارند.',
+      },
+      {
+        'icon': Icons.sms_rounded,
+        'color': const Color(0xFF10B981),
+        'title': 'درج نام استخر در پیامک ارسالی به والدین',
+        'desc': 'ارسال نام دقیق استخری که شناگر در آن ورود ثبت کرده به اولیاء جهت اطلاع‌رسانی دقیق و شفاف.',
+      },
       {
         'icon': Icons.autorenew_rounded,
         'color': const Color(0xFF10B981),

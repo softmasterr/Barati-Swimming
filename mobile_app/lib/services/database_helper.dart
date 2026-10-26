@@ -25,7 +25,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -42,6 +42,14 @@ class DatabaseHelper {
         await db.execute('ALTER TABLE definitions ADD COLUMN sessions INTEGER DEFAULT 0');
       } catch (_) {}
       await _seedCoursePackages(db);
+    }
+    if (oldVersion < 4) {
+      try {
+        await db.execute('ALTER TABLE attendance_logs ADD COLUMN poolName TEXT DEFAULT ""');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE transactions ADD COLUMN poolName TEXT DEFAULT ""');
+      } catch (_) {}
     }
   }
 
@@ -88,7 +96,8 @@ class DatabaseHelper {
         title TEXT NOT NULL,
         amount INTEGER NOT NULL,
         method TEXT NOT NULL,
-        author TEXT NOT NULL
+        author TEXT NOT NULL,
+        poolName TEXT DEFAULT ''
       )
     ''');
 
@@ -101,7 +110,8 @@ class DatabaseHelper {
         coachName TEXT NOT NULL,
         status TEXT NOT NULL,
         sessionsLeft INTEGER NOT NULL,
-        note TEXT NOT NULL
+        note TEXT NOT NULL,
+        poolName TEXT DEFAULT ''
       )
     ''');
 

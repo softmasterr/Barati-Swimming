@@ -26,13 +26,14 @@ class CheckinResultSheet extends StatelessWidget {
     final athlete = result['athlete'] as Athlete?;
     final coach = result['coach'] as Coach?;
     final smsText = result['smsText'] as String?;
+    final poolName = result['poolName'] as String? ?? '';
 
     Color bannerColor;
     IconData statusIcon;
 
-    if (status == 'approved') {
+    if (status == 'approved' || status == 'coach_entry') {
       bannerColor = const Color(0xFF10B981);
-      statusIcon = Icons.check_circle_rounded;
+      statusIcon = status == 'coach_entry' ? Icons.sports : Icons.check_circle_rounded;
     } else if (status == 'warning') {
       bannerColor = const Color(0xFFF59E0B);
       statusIcon = Icons.warning_amber_rounded;
@@ -79,13 +80,31 @@ class CheckinResultSheet extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          color: bannerColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: TextStyle(
+                                color: bannerColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                          if (poolName.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: bannerColor.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                poolName,
+                                style: TextStyle(color: bannerColor, fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -99,6 +118,41 @@ class CheckinResultSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
+
+          // Coach Profile if Coach Entry
+          if (athlete == null && coach != null) ...[
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: const Color(0xFF0284C7).withOpacity(0.15),
+                  child: const Icon(Icons.sports, color: Color(0xFF0284C7), size: 28),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        coach.name,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                      ),
+                      Text(
+                        'مربی رسمی آکادمی • ${coach.specialty}',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                      ),
+                      if (poolName.isNotEmpty)
+                        Text(
+                          'محل حضور: $poolName',
+                          style: const TextStyle(color: Color(0xFF0284C7), fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+          ],
 
           // Athlete Profile if recognized
           if (athlete != null) ...[

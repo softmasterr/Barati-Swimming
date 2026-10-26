@@ -4,6 +4,7 @@ import '../providers/academy_provider.dart';
 import '../widgets/checkin_result_sheet.dart';
 import '../widgets/new_card_detected_dialog.dart';
 import '../widgets/duplicate_scan_dialog.dart';
+import '../widgets/pool_selection_dialog.dart';
 
 class ScannerScreen extends StatefulWidget {
   const ScannerScreen({super.key});
@@ -44,30 +45,101 @@ class _ScannerScreenState extends State<ScannerScreen> {
   void _showManualSearchDialog() {
     final provider = context.read<AcademyProvider>();
     final athletes = provider.athletes;
+    final coaches = provider.coaches;
     String query = '';
+    int selectedTab = 0; // 0: Athletes, 1: Coaches
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) {
-          final filtered = athletes.where((a) {
+          final filteredAthletes = athletes.where((a) {
             if (query.isEmpty) return true;
             return a.name.contains(query) || a.phone.contains(query);
+          }).toList();
+
+          final filteredCoaches = coaches.where((c) {
+            if (query.isEmpty) return true;
+            return c.name.contains(query) || c.phone.contains(query) || c.specialty.contains(query);
           }).toList();
 
           return Directionality(
             textDirection: TextDirection.rtl,
             child: AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: const Text('ثبت دستی حضور (فراموشی کارت)', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              title: const Row(
+                children: [
+                  Icon(Icons.how_to_reg_rounded, color: Color(0xFF0284C7)),
+                  SizedBox(width: 8),
+                  Text('ثبت دستی ورود به استخر', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                ],
+              ),
               content: SizedBox(
                 width: double.maxFinite,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Segmented Selector: Athletes vs Coaches
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => setDialogState(() => selectedTab = 0),
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: selectedTab == 0 ? const Color(0xFF0284C7) : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  'شناگران (${athletes.length})',
+                                  style: TextStyle(
+                                    color: selectedTab == 0 ? Colors.white : Colors.grey[700],
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => setDialogState(() => selectedTab = 1),
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: selectedTab == 1 ? const Color(0xFF0284C7) : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  'مربیان (${coaches.length})',
+                                  style: TextStyle(
+                                    color: selectedTab == 1 ? Colors.white : Colors.grey[700],
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Search Input Field
                     TextField(
                       decoration: InputDecoration(
-                        hintText: 'نام یا شماره موبایل ورزشکار...',
+                        hintText: selectedTab == 0 ? 'نام یا شماره موبایل شناگر...' : 'نام یا تخصص مربی...',
                         prefixIcon: const Icon(Icons.search),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -77,43 +149,83 @@ class _ScannerScreenState extends State<ScannerScreen> {
                       },
                     ),
                     const SizedBox(height: 12),
+
+                    // Results List
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxHeight: 220),
-                      child: filtered.isEmpty
-                          ? const Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Text('ورزشکاری یافت نشد', style: TextStyle(color: Colors.grey)),
-                            )
-                          : ListView.separated(
-                              shrinkWrap: true,
-                              itemCount: filtered.length,
-                              separatorBuilder: (_, __) => const Divider(height: 1),
-                              itemBuilder: (c, idx) {
-                                final a = filtered[idx];
-                                return ListTile(
-                                  dense: true,
-                                  title: Text(a.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                  subtitle: Text('مانده: ${a.remainingSessions} جلسه', style: const TextStyle(fontSize: 11)),
-                                  trailing: ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF0284C7),
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                    ),
-                                    onPressed: () {
-                                      Navigator.pop(ctx);
-                                      if (a.cardUid.isNotEmpty) {
-                                        _triggerScan(a.cardUid);
-                                      } else {
-                                        // temporary UID
-                                        _triggerScan('TEMP-${a.id}');
-                                      }
-                                    },
-                                    child: const Text('ثبت ورود', style: TextStyle(fontSize: 12)),
-                                  ),
-                                );
-                              },
-                            ),
+                      child: selectedTab == 0
+                          ? (filteredAthletes.isEmpty
+                              ? const Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Text('شناگری یافت نشد', style: TextStyle(color: Colors.grey)),
+                                )
+                              : ListView.separated(
+                                  shrinkWrap: true,
+                                  itemCount: filteredAthletes.length,
+                                  separatorBuilder: (_, __) => const Divider(height: 1),
+                                  itemBuilder: (c, idx) {
+                                    final a = filteredAthletes[idx];
+                                    return ListTile(
+                                      dense: true,
+                                      title: Text(a.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                      subtitle: Text('مانده: ${a.remainingSessions} جلسه', style: const TextStyle(fontSize: 11)),
+                                      trailing: ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFF0284C7),
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                        ),
+                                        onPressed: () {
+                                          Navigator.pop(ctx);
+                                          if (a.cardUid.isNotEmpty) {
+                                            _triggerScan(a.cardUid);
+                                          } else {
+                                            _triggerScan('TEMP-${a.id}');
+                                          }
+                                        },
+                                        child: const Text('ثبت ورود', style: TextStyle(fontSize: 12)),
+                                      ),
+                                    );
+                                  },
+                                ))
+                          : (filteredCoaches.isEmpty
+                              ? const Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Text('مربی‌ای یافت نشد', style: TextStyle(color: Colors.grey)),
+                                )
+                              : ListView.separated(
+                                  shrinkWrap: true,
+                                  itemCount: filteredCoaches.length,
+                                  separatorBuilder: (_, __) => const Divider(height: 1),
+                                  itemBuilder: (c, idx) {
+                                    final coach = filteredCoaches[idx];
+                                    return ListTile(
+                                      dense: true,
+                                      leading: const CircleAvatar(
+                                        radius: 16,
+                                        backgroundColor: Color(0xFFE0F2FE),
+                                        child: Icon(Icons.sports, color: Color(0xFF0284C7), size: 18),
+                                      ),
+                                      title: Text(coach.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                      subtitle: Text(coach.specialty, style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+                                      trailing: ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFF10B981),
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                        ),
+                                        onPressed: () async {
+                                          Navigator.pop(ctx);
+                                          final res = await provider.recordCoachCheckIn(coach);
+                                          if (mounted) {
+                                            CheckinResultSheet.show(context, res);
+                                          }
+                                        },
+                                        child: const Text('ثبت حضور مربی', style: TextStyle(fontSize: 11)),
+                                      ),
+                                    );
+                                  },
+                                )),
                     ),
                   ],
                 ),
@@ -143,6 +255,57 @@ class _ScannerScreenState extends State<ScannerScreen> {
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // Active Pool Banner
+            Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F9FF),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFBAE6FD)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0284C7).withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.location_on_rounded, color: Color(0xFF0284C7), size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'استخر فعال جهت ثبت تردد و ورود:',
+                          style: TextStyle(color: Color(0xFF0369A1), fontSize: 10),
+                        ),
+                        Text(
+                          provider.activePoolName,
+                          style: const TextStyle(color: Color(0xFF0C4A6E), fontSize: 13, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF0284C7),
+                      side: const BorderSide(color: Color(0xFF0284C7)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    icon: const Icon(Icons.edit_location_alt_rounded, size: 14),
+                    label: const Text('تغییر استخر', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    onPressed: () => PoolSelectionDialog.show(context),
+                  ),
+                ],
+              ),
+            ),
+
             // NFC Scanner Radar Card
             Container(
               padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
@@ -324,7 +487,19 @@ class _ScannerScreenState extends State<ScannerScreen> {
                 itemCount: recentLogs.length > 8 ? 8 : recentLogs.length,
                 itemBuilder: (ctx, i) {
                   final log = recentLogs[i];
-                  final isOk = log.status == 'approved';
+                  final isCoach = log.status == 'coach_entry';
+                  final isOk = log.status == 'approved' || isCoach;
+
+                  Color avatarBg = isCoach
+                      ? const Color(0xFFE0F2FE)
+                      : (isOk ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7));
+                  Color iconColor = isCoach
+                      ? const Color(0xFF0284C7)
+                      : (isOk ? const Color(0xFF166534) : const Color(0xFFB45309));
+                  IconData iconData = isCoach
+                      ? Icons.sports
+                      : (isOk ? Icons.check : Icons.warning_amber_rounded);
+
                   return Container(
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -340,19 +515,33 @@ class _ScannerScreenState extends State<ScannerScreen> {
                           children: [
                             CircleAvatar(
                               radius: 14,
-                              backgroundColor: isOk ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
-                              child: Icon(
-                                isOk ? Icons.check : Icons.warning_amber_rounded,
-                                color: isOk ? const Color(0xFF166534) : const Color(0xFFB45309),
-                                size: 16,
-                              ),
+                              backgroundColor: avatarBg,
+                              child: Icon(iconData, color: iconColor, size: 16),
                             ),
                             const SizedBox(width: 10),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(log.athleteName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                Text('مربی: ${log.coachName}', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+                                Row(
+                                  children: [
+                                    Text(log.athleteName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                    if (isCoach) ...[
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF0284C7).withOpacity(0.12),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: const Text('مربی', style: TextStyle(color: Color(0xFF0284C7), fontSize: 9, fontWeight: FontWeight.bold)),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                Text(
+                                  '${isCoach ? "ثبت ورود مربی" : "مربی: ${log.coachName}"}${log.poolName.isNotEmpty ? " • ${log.poolName}" : ""}',
+                                  style: TextStyle(color: Colors.grey[600], fontSize: 11),
+                                ),
                               ],
                             ),
                           ],
@@ -361,7 +550,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(log.time, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                            Text('${log.sessionsLeft} جلسه مانده', style: TextStyle(color: Colors.grey[500], fontSize: 10)),
+                            Text(
+                              isCoach ? 'ثبت ورود' : '${log.sessionsLeft} جلسه مانده',
+                              style: TextStyle(color: isCoach ? const Color(0xFF0284C7) : Colors.grey[500], fontSize: 10),
+                            ),
                           ],
                         ),
                       ],

@@ -239,47 +239,103 @@ class CoachesScreen extends StatelessWidget {
   void _showSettleCoachDialog(BuildContext context, Coach coach, int payable) {
     final amountCtrl = TextEditingController(text: payable > 0 ? payable.toString() : '500000');
     final refCtrl = TextEditingController();
+    final customPoolCtrl = TextEditingController();
     final provider = context.read<AcademyProvider>();
     final currency = NumberFormat('#,###', 'fa');
+    String selectedPool = provider.activePoolName;
+    bool isCustomPool = false;
+
+    final pools = List<String>.from(provider.registeredPools);
+    if (!pools.contains(selectedPool)) {
+      pools.insert(0, selectedPool);
+    }
 
     showDialog(
       context: context,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('تسویه‌حساب با ${coach.name}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('مانده طلب فعلی مربی: ${currency.format(payable)} تومان', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13)),
-              const SizedBox(height: 12),
-              TextField(
-                controller: amountCtrl,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'مبلغ واریز به حساب مربی (تومان)', isDense: true),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text('تسویه‌حساب با ${coach.name}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('مانده طلب فعلی مربی: ${currency.format(payable)} تومان', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 12),
+                  // Associated Pool Selector
+                  DropdownButtonFormField<String>(
+                    value: isCustomPool ? '__CUSTOM__' : selectedPool,
+                    decoration: const InputDecoration(
+                      labelText: 'نام استخر مرتبط با این تسویه *',
+                      prefixIcon: Icon(Icons.pool_rounded, color: Color(0xFF0284C7)),
+                      isDense: true,
+                    ),
+                    items: [
+                      ...pools.map((p) => DropdownMenuItem(value: p, child: Text(p))),
+                      const DropdownMenuItem(value: '__CUSTOM__', child: Text('+ استخر دیگر (ورود دستی)')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        setDialogState(() {
+                          if (val == '__CUSTOM__') {
+                            isCustomPool = true;
+                          } else {
+                            isCustomPool = false;
+                            selectedPool = val;
+                          }
+                        });
+                      }
+                    },
+                  ),
+                  if (isCustomPool) ...[
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: customPoolCtrl,
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                        labelText: 'نام استخر را بنویسید...',
+                        prefixIcon: Icon(Icons.edit_location_alt_rounded),
+                        isDense: true,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: amountCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'مبلغ واریز به حساب مربی (تومان) *', isDense: true),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: refCtrl,
+                    decoration: const InputDecoration(labelText: 'شماره پیگیری پایا / ساتنا', isDense: true),
+                  ),
+                ],
               ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: refCtrl,
-                decoration: const InputDecoration(labelText: 'شماره پیگیری پایا / ساتنا', isDense: true),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('انصراف')),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0284C7), foregroundColor: Colors.white),
+                onPressed: () {
+                  final amount = int.tryParse(amountCtrl.text.trim()) ?? 0;
+                  final poolName = isCustomPool ? customPoolCtrl.text.trim() : selectedPool;
+                  if (amount > 0) {
+                    provider.settleCoach(
+                      coach.id,
+                      amount,
+                      refCtrl.text.trim(),
+                      poolName: poolName.isNotEmpty ? poolName : provider.activePoolName,
+                    );
+                    Navigator.pop(ctx);
+                  }
+                },
+                child: const Text('ثبت واریز'),
               ),
             ],
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('انصراف')),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0284C7), foregroundColor: Colors.white),
-              onPressed: () {
-                final amount = int.tryParse(amountCtrl.text.trim()) ?? 0;
-                if (amount > 0) {
-                  provider.settleCoach(coach.id, amount, refCtrl.text.trim());
-                  Navigator.pop(ctx);
-                }
-              },
-              child: const Text('ثبت واریز'),
-            ),
-          ],
         ),
       ),
     );

@@ -31,6 +31,7 @@ class AcademyProvider with ChangeNotifier {
 
   UserSession? _currentUser;
   AppSettings _settings = AppSettings();
+  String _activePoolName = 'استخر مرکزی براتی';
 
   bool _isLoading = true;
   bool _isOfflineMode = false;
@@ -45,11 +46,57 @@ class AcademyProvider with ChangeNotifier {
   List<DefinitionItem> get definitions => _definitions;
   UserSession? get currentUser => _currentUser;
   AppSettings get settings => _settings;
+  String get activePoolName => _activePoolName;
+  List<String> get registeredPools => _settings.registeredPools;
 
   bool get isLoading => _isLoading;
   bool get isOfflineMode => _isOfflineMode;
   bool get isHeadCoach => _currentUser?.isHeadCoach ?? true;
   bool get isAssistantCoach => _currentUser?.isAssistantCoach ?? false;
+
+  Future<void> setActivePoolName(String poolName) async {
+    final trimmed = poolName.trim();
+    if (trimmed.isEmpty) return;
+    _activePoolName = trimmed;
+    _settings.activePoolName = trimmed;
+    if (!_settings.registeredPools.contains(trimmed)) {
+      _settings.registeredPools.add(trimmed);
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('active_pool_name', _activePoolName);
+    await prefs.setString('registered_pools', _settings.registeredPools.join('|||'));
+    FeedbackService.trigger(FeedbackType.info, 'استخر فعال تنظیم شد: $_activePoolName');
+    notifyListeners();
+  }
+
+  Future<void> addRegisteredPool(String poolName) async {
+    final trimmed = poolName.trim();
+    if (trimmed.isEmpty) return;
+    if (!_settings.registeredPools.contains(trimmed)) {
+      _settings.registeredPools.add(trimmed);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('registered_pools', _settings.registeredPools.join('|||'));
+      FeedbackService.trigger(FeedbackType.success, 'استخر جدید اضافه شد: $trimmed');
+      notifyListeners();
+    }
+  }
+
+  Future<void> removeRegisteredPool(String poolName) async {
+    if (_settings.registeredPools.length <= 1) {
+      FeedbackService.trigger(FeedbackType.warning, 'حداقل یک استخر باید در سیستم تعریف شده باشد');
+      return;
+    }
+    _settings.registeredPools.remove(poolName);
+    if (_activePoolName == poolName) {
+      _activePoolName = _settings.registeredPools.first;
+      _settings.activePoolName = _activePoolName;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('active_pool_name', _activePoolName);
+    await prefs.setString('registered_pools', _settings.registeredPools.join('|||'));
+    FeedbackService.trigger(FeedbackType.success, 'استخر مورد نظر حذف شد');
+    notifyListeners();
+  }
 
   // Accessible Athletes depending on User Role
   List<Athlete> get accessibleAthletes {
@@ -72,12 +119,26 @@ class AcademyProvider with ChangeNotifier {
 
   Future<void> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
+    final savedPoolsStr = prefs.getString('registered_pools');
+    List<String> loadedPools = [
+      'استخر مرکزی براتی',
+      'استخر موج طلایی',
+      'استخر شهید چمران',
+    ];
+    if (savedPoolsStr != null && savedPoolsStr.isNotEmpty) {
+      loadedPools = savedPoolsStr.split('|||').where((s) => s.trim().isNotEmpty).toList();
+    }
+    final savedActivePool = prefs.getString('active_pool_name') ?? loadedPools.first;
+    _activePoolName = savedActivePool;
+
     _settings = AppSettings(
       academyName: prefs.getString('academy_name') ?? 'آکادمی شنای براتی',
       schoolId: prefs.getString('school_id') ?? 'barati-pool',
       licenseKey: prefs.getString('license_key') ?? 'LIC-BARATI-2026-VIP',
       subscriptionExpiry: prefs.getString('subscription_expiry') ?? '۱۴۰۵/۱۲/۲۹',
       subscriptionStatus: prefs.getString('subscription_status') ?? 'active',
+      activePoolName: savedActivePool,
+      registeredPools: loadedPools,
       serverUrl: prefs.getString('server_url') ?? 'https://api.barati-swimming.ir',
       apiKey: prefs.getString('server_api_key') ?? '',
       autoSync: prefs.getBool('auto_sync') ?? true,
@@ -85,7 +146,7 @@ class AcademyProvider with ChangeNotifier {
       smsApiKey: prefs.getString('sms_api_key') ?? '',
       smsSenderLine: prefs.getString('sms_sender_line') ?? '10008585',
       smsEntryTemplate: prefs.getString('sms_entry_template') ??
-          'فرزند شما {name} ساعت {time} وارد استخر شد. مانده جلسات: {sessions}',
+          'فرزند شما {name} ساعت {time} وارد {pool} شد. مانده جلسات: {sessions}',
       smsLowBalanceTemplate: prefs.getString('sms_low_balance_template') ??
           'اولیاء گرامی، تنها {sessions} جلسه از اعتبار دوره فرزند شما {name} در {academy} باقی مانده است. لطفاً نسبت به تمدید اقدام فرمایید.',
       smsRechargeTemplate: prefs.getString('sms_recharge_template') ??
@@ -95,7 +156,7 @@ class AcademyProvider with ChangeNotifier {
       cooldownMinutes: prefs.getInt('cooldown_minutes') ?? 60,
       isDemoMode: prefs.getBool('is_demo_mode') ?? true,
       isOnboardingCompleted: prefs.getBool('onboarding_completed') ?? false,
-      appVersion: '1.1.0',
+      appVersion: '1.2.0',
       lastSeenVersion: prefs.getString('last_seen_version') ?? '',
     );
     notifyListeners();
@@ -103,7 +164,10 @@ class AcademyProvider with ChangeNotifier {
 
   Future<void> updateSettings(AppSettings newSettings) async {
     _settings = newSettings;
+    _activePoolName = newSettings.activePoolName;
     final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('active_pool_name', newSettings.activePoolName);
+    await prefs.setString('registered_pools', newSettings.registeredPools.join('|||'));
     await prefs.setString('academy_name', newSettings.academyName);
     await prefs.setString('school_id', newSettings.schoolId);
     await prefs.setString('license_key', newSettings.licenseKey);
@@ -400,17 +464,29 @@ class AcademyProvider with ChangeNotifier {
       status: isGraceEntry ? 'grace_entry' : (hasWarning ? 'warning' : 'approved'),
       sessionsLeft: athlete.remainingSessions,
       note: warnText,
+      poolName: _activePoolName,
     );
     await _db.insertAttendanceLog(attLog);
     _attendanceLogs.insert(0, attLog);
 
-    // Format & Dispatch Entry SMS
+    // Format & Dispatch Entry SMS with Pool Name
+    final poolLabel = _activePoolName.isNotEmpty ? _activePoolName : _settings.academyName;
     String smsContent = _settings.smsEntryTemplate
         .replaceAll('{name}', athlete.name)
         .replaceAll('{time}', nowTime)
         .replaceAll('{sessions}', athlete.remainingSessions.toString())
+        .replaceAll('{pool}', poolLabel)
         .replaceAll('{academy}', _settings.academyName)
         .replaceAll('{debt}', _formatCurrency(athlete.debt));
+
+    // Ensure pool name is present even if user's saved template lacked {pool}
+    if (!_settings.smsEntryTemplate.contains('{pool}')) {
+      if (smsContent.contains('وارد استخر شد')) {
+        smsContent = smsContent.replaceAll('وارد استخر شد', 'وارد $poolLabel شد');
+      } else if (!smsContent.contains(poolLabel)) {
+        smsContent += ' (استخر: $poolLabel)';
+      }
+    }
 
     if (athlete.debt > 0 && !smsContent.contains('{debt}')) {
       smsContent += ' (بدهی: ${_formatCurrency(athlete.debt)} ت)';
@@ -444,6 +520,7 @@ class AcademyProvider with ChangeNotifier {
       final reminderText = _settings.smsLowBalanceTemplate
           .replaceAll('{name}', athlete.name)
           .replaceAll('{sessions}', athlete.remainingSessions.toString())
+          .replaceAll('{pool}', poolLabel)
           .replaceAll('{academy}', _settings.academyName);
 
       final reminderSms = SmsLog(
@@ -488,7 +565,37 @@ class AcademyProvider with ChangeNotifier {
       'sub': 'ساعت $nowTime • مانده: ${athlete.remainingSessions} جلسه',
       'athlete': athlete,
       'coach': coach,
+      'poolName': _activePoolName,
       'smsText': smsContent,
+    };
+  }
+
+  // --- Record Coach Attendance ---
+  Future<Map<String, dynamic>> recordCoachCheckIn(Coach coach) async {
+    final nowTime = _formatTime();
+    final attLog = AttendanceLog(
+      id: 'att-coach-${DateTime.now().millisecondsSinceEpoch}',
+      time: nowTime,
+      athleteName: coach.name,
+      coachName: coach.name,
+      status: 'coach_entry',
+      sessionsLeft: 0,
+      note: 'حضور مربی در $_activePoolName',
+      poolName: _activePoolName,
+    );
+    await _db.insertAttendanceLog(attLog);
+    _attendanceLogs.insert(0, attLog);
+
+    FeedbackService.trigger(FeedbackType.success, 'ورود مربی ${coach.name} در $_activePoolName ثبت شد');
+    notifyListeners();
+
+    return {
+      'status': 'coach_entry',
+      'title': 'ثبت ورود مربی',
+      'sub': 'مربی: ${coach.name} • استخر: $_activePoolName • ساعت $nowTime',
+      'athlete': null,
+      'coach': coach,
+      'poolName': _activePoolName,
     };
   }
 
@@ -524,6 +631,7 @@ class AcademyProvider with ChangeNotifier {
         amount: initialPaid,
         method: 'کارتخوان پوز استخر',
         author: _currentUser?.name ?? 'سرمربی',
+        poolName: _activePoolName,
       );
       await _db.insertTransaction(tx);
       _transactions.insert(0, tx);
@@ -605,6 +713,7 @@ class AcademyProvider with ChangeNotifier {
         amount: initialPaid,
         method: 'نقدی / پوز',
         author: _currentUser?.name ?? 'سرمربی',
+        poolName: _activePoolName,
       );
       await _db.insertTransaction(tx);
       _transactions.insert(0, tx);
@@ -637,12 +746,13 @@ class AcademyProvider with ChangeNotifier {
   }
 
   // --- Record Payment ---
-  Future<void> recordPayment(String athleteId, int amount, String method, String note) async {
+  Future<void> recordPayment(String athleteId, int amount, String method, String note, {String? poolName}) async {
     final athlete = _athletes.firstWhere((a) => a.id == athleteId);
     athlete.debt = athlete.debt > amount ? athlete.debt - amount : 0;
     athlete.paidAmount += amount;
     await _db.updateAthlete(athlete);
 
+    final currentPool = (poolName != null && poolName.trim().isNotEmpty) ? poolName.trim() : _activePoolName;
     final tx = TransactionRecord(
       id: 'tx-${DateTime.now().millisecondsSinceEpoch}',
       date: '۱۴۰۵/۰۸/۲۴',
@@ -651,6 +761,7 @@ class AcademyProvider with ChangeNotifier {
       amount: amount,
       method: method,
       author: _currentUser?.name ?? 'سرمربی',
+      poolName: currentPool,
     );
     await _db.insertTransaction(tx);
     _transactions.insert(0, tx);
@@ -673,7 +784,8 @@ class AcademyProvider with ChangeNotifier {
   }
 
   // --- Record Expense ---
-  Future<void> recordExpense(String category, int amount, String title) async {
+  Future<void> recordExpense(String category, int amount, String title, {String? poolName}) async {
+    final currentPool = (poolName != null && poolName.trim().isNotEmpty) ? poolName.trim() : _activePoolName;
     final tx = TransactionRecord(
       id: 'tx-${DateTime.now().millisecondsSinceEpoch}',
       date: '۱۴۰۵/۰۸/۲۴',
@@ -682,6 +794,7 @@ class AcademyProvider with ChangeNotifier {
       amount: amount,
       method: 'حساب جاری استخر',
       author: _currentUser?.name ?? 'سرمربی',
+      poolName: currentPool,
     );
     await _db.insertTransaction(tx);
     _transactions.insert(0, tx);
@@ -691,7 +804,8 @@ class AcademyProvider with ChangeNotifier {
   }
 
   // --- Settle Coach ---
-  Future<void> settleCoach(String coachId, int amount, String ref) async {
+  Future<void> settleCoach(String coachId, int amount, String ref, {String? poolName}) async {
+    final currentPool = (poolName != null && poolName.trim().isNotEmpty) ? poolName.trim() : _activePoolName;
     final coach = _coaches.firstWhere((c) => c.id == coachId);
     coach.settledAmount += amount;
     await _db.updateCoach(coach);
@@ -704,6 +818,7 @@ class AcademyProvider with ChangeNotifier {
       amount: amount,
       method: 'واریز بانکی / پایا',
       author: _currentUser?.name ?? 'سرمربی',
+      poolName: currentPool,
     );
     await _db.insertTransaction(tx);
     _transactions.insert(0, tx);

@@ -7,6 +7,7 @@ import '../widgets/new_card_detected_dialog.dart';
 import '../widgets/duplicate_scan_dialog.dart';
 import '../widgets/changelog_dialog.dart';
 import '../widgets/sync_queue_dialog.dart';
+import '../widgets/pool_selection_dialog.dart';
 import 'scanner_screen.dart';
 import 'athletes_screen.dart';
 import 'coaches_screen.dart';
@@ -24,18 +25,23 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
+  static bool _hasPromptedPoolOnLaunch = false;
 
   @override
   void initState() {
     super.initState();
     _initGlobalNfcListener();
 
-    // Check version changelog on startup
+    // Check version changelog and prompt pool selection on startup
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<AcademyProvider>();
       if (provider.settings.lastSeenVersion != provider.settings.appVersion) {
         ChangelogDialog.show(context, version: provider.settings.appVersion);
         provider.markVersionSeen(provider.settings.appVersion);
+      }
+      if (!_hasPromptedPoolOnLaunch) {
+        _hasPromptedPoolOnLaunch = true;
+        PoolSelectionDialog.show(context);
       }
     });
   }
@@ -166,6 +172,39 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             ],
           ),
           actions: [
+            // Active Pool Switcher Badge
+            InkWell(
+              onTap: () => PoolSelectionDialog.show(context),
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0369A1).withOpacity(0.4),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF38BDF8), width: 0.8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.pool_rounded, color: Color(0xFF38BDF8), size: 13),
+                    const SizedBox(width: 4),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 100),
+                      child: Text(
+                        provider.activePoolName,
+                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    const Icon(Icons.arrow_drop_down, color: Color(0xFF38BDF8), size: 16),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 2),
+
             // Definitions Button (Only visible to Head Coach)
             if (isHeadCoach)
               IconButton(

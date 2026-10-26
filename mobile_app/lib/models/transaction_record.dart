@@ -6,6 +6,7 @@ class TransactionRecord {
   final int amount;
   final String method;
   final String author;
+  final String poolName;
 
   TransactionRecord({
     required this.id,
@@ -15,6 +16,7 @@ class TransactionRecord {
     required this.amount,
     required this.method,
     required this.author,
+    this.poolName = '',
   });
 
   Map<String, dynamic> toMap() {
@@ -26,6 +28,7 @@ class TransactionRecord {
       'amount': amount,
       'method': method,
       'author': author,
+      'poolName': poolName,
     };
   }
 
@@ -38,6 +41,7 @@ class TransactionRecord {
       amount: map['amount'] ?? 0,
       method: map['method'] ?? '',
       author: map['author'] ?? '',
+      poolName: map['poolName'] ?? '',
     );
   }
 }

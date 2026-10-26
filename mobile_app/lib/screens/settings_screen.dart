@@ -104,6 +104,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       licenseKey: _licenseKeyCtrl.text.trim(),
       subscriptionExpiry: _subscriptionExpiryCtrl.text.trim(),
       subscriptionStatus: provider.settings.subscriptionStatus,
+      activePoolName: provider.activePoolName,
+      registeredPools: provider.registeredPools,
       serverUrl: _serverUrlCtrl.text.trim(),
       apiKey: _apiKeyCtrl.text.trim(),
       smsProvider: _smsProvider,
@@ -239,6 +241,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
       SnackBar(
         content: Text(res.message),
         backgroundColor: res.success ? Colors.green : Colors.orange[800],
+      ),
+    );
+  }
+
+  void _showAddPoolDialog(BuildContext context) {
+    final poolCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('افزودن نام استخر جدید', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+          content: TextField(
+            controller: poolCtrl,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'نام استخر *',
+              hintText: 'مثال: استخر کوثر',
+              prefixIcon: Icon(Icons.pool_rounded),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('انصراف')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0284C7), foregroundColor: Colors.white),
+              onPressed: () {
+                final name = poolCtrl.text.trim();
+                if (name.isNotEmpty) {
+                  context.read<AcademyProvider>().addRegisteredPool(name);
+                  Navigator.pop(ctx);
+                }
+              },
+              child: const Text('افزودن'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -565,6 +604,99 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             const SizedBox(height: 16),
 
+            // Multi-Pool Management Card
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on_rounded, color: Color(0xFF0284C7)),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'مدیریت شعب و استخرهای همکار',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ),
+                        TextButton.icon(
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('استخر جدید', style: TextStyle(fontSize: 12)),
+                          onPressed: () => _showAddPoolDialog(context),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'در این بخش می‌توانید لیست استخرهایی که مربیان و شناگران در آنها فعالیت دارند را مدیریت کنید. استخر فعال در هنگام ثبت ورود و ثبت هزینه‌ها استفاده می‌شود.',
+                      style: TextStyle(color: Colors.grey, fontSize: 11, height: 1.5),
+                    ),
+                    const SizedBox(height: 12),
+                    ...provider.registeredPools.map((pool) {
+                      final isActive = provider.activePoolName == pool;
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isActive ? const Color(0xFFF0F9FF) : Colors.grey[50],
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isActive ? const Color(0xFF0284C7) : Colors.grey[200]!,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isActive ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                              color: isActive ? const Color(0xFF0284C7) : Colors.grey,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                pool,
+                                style: TextStyle(
+                                  fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                                  color: isActive ? const Color(0xFF0284C7) : Colors.black87,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                            if (isActive)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0284C7),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text('استخر فعال', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                              )
+                            else ...[
+                              TextButton(
+                                onPressed: () => provider.setActivePoolName(pool),
+                                child: const Text('فعال‌سازی', style: TextStyle(fontSize: 11)),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
+                                tooltip: 'حذف استخر',
+                                onPressed: () => provider.removeRegisteredPool(pool),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
             // Subscription & Multi-Tenant SaaS License (Requirement 9)
             Card(
               elevation: 2,
@@ -868,7 +1000,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'متغیرهای قابل استفاده در متن: {name} (نام شناگر) ، {time} (ساعت) ، {sessions} (مانده جلسات) ، {academy} (نام استخر) ، {package} (پکیج دوره)',
+                      'متغیرهای قابل استفاده در متن: {name} (نام شناگر) ، {time} (ساعت) ، {sessions} (مانده جلسات) ، {pool} (نام استخر تردد) ، {academy} (نام آکادمی) ، {package} (پکیج دوره)',
                       style: TextStyle(color: Color(0xFF0D9488), fontSize: 11, fontWeight: FontWeight.bold, height: 1.5),
                     ),
                     const SizedBox(height: 14),

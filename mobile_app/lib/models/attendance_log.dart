@@ -3,9 +3,10 @@ class AttendanceLog {
   final String time;
   final String athleteName;
   final String coachName;
-  final String status; // approved | warning | denied
+  final String status; // approved | warning | denied | coach_entry
   final int sessionsLeft;
   final String note;
+  final String poolName;
 
   AttendanceLog({
     required this.id,
@@ -15,6 +16,7 @@ class AttendanceLog {
     required this.status,
     required this.sessionsLeft,
     required this.note,
+    this.poolName = '',
   });
 
   Map<String, dynamic> toMap() {
@@ -26,6 +28,7 @@ class AttendanceLog {
       'status': status,
       'sessionsLeft': sessionsLeft,
       'note': note,
+      'poolName': poolName,
     };
   }
 
@@ -38,6 +41,7 @@ class AttendanceLog {
       status: map['status'] ?? 'approved',
       sessionsLeft: map['sessionsLeft'] ?? 0,
       note: map['note'] ?? '',
+      poolName: map['poolName'] ?? '',
     );
   }
 }
