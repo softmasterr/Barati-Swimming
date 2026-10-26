@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter/material.dart';
 
-enum FeedbackType { success, warning, error }
+enum FeedbackType { success, warning, error, info }
 
 class FeedbackService {
   static const MethodChannel _audioChannel = MethodChannel('com.barati.swimming/audio');
@@ -13,6 +13,18 @@ class FeedbackService {
 
     // 2. Trigger Haptic Vibration & Visual Toast
     switch (type) {
+      case FeedbackType.info:
+        HapticFeedback.lightImpact();
+        Fluttertoast.showToast(
+          msg: message,
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.TOP,
+          backgroundColor: const Color(0xFF0284C7),
+          textColor: Colors.white,
+          fontSize: 14.0,
+        );
+        break;
+
       case FeedbackType.success:
         HapticFeedback.lightImpact();
         Fluttertoast.showToast(
@@ -59,7 +71,7 @@ class FeedbackService {
 
   static void _playNativeBeep(FeedbackType type) async {
     try {
-      final typeStr = type == FeedbackType.success
+      final typeStr = (type == FeedbackType.success || type == FeedbackType.info)
           ? 'success'
           : type == FeedbackType.warning
               ? 'warning'

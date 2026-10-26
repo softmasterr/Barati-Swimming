@@ -769,7 +769,7 @@ class AcademyProvider with ChangeNotifier {
   Future<void> deleteCoach(String coachId) async {
     await _db.deleteCoach(coachId);
     _coaches.removeWhere((c) => c.id == coachId);
-    FeedbackService.trigger(FeedbackType.info, 'مربی حذف گردید');
+    FeedbackService.trigger(FeedbackType.warning, 'مربی از سیستم حذف گردید');
     notifyListeners();
   }
 
